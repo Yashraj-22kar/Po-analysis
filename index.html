@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scimplify — Procurement Analytics Dashboard</title>
+<style>
+:root {
+  --c1: #03c5ae;
+  --c2: #00635c;
+  --grad: linear-gradient(135deg, #03c5ae 0%, #00635c 100%);
+  --bg: #f2f5f7;
+  --surface: #ffffff;
+  --surface2: #f7f9fb;
+  --border: #dde3ea;
+  --text: #1c2b36;
+  --text2: #3d5263;
+  --text3: #7a93a6;
+  --shadow: 0 2px 12px rgba(0,99,92,0.07);
+  --shadow-lg: 0 6px 28px rgba(0,99,92,0.13);
+  --r: 12px; --r-sm: 8px;
+}
+[data-theme="dark"] {
+  --bg: #0e1318; --surface: #161d24; --surface2: #1c2530;
+  --border: #283545; --text: #e4eff5; --text2: #9ab3c4; --text3: #5d7a8e;
+  --shadow: 0 2px 12px rgba(0,0,0,0.35); --shadow-lg: 0 6px 28px rgba(0,0,0,0.5);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Calibri','Segoe UI','Trebuchet MS',Arial,sans-serif;font-size:14px;background:var(--bg);color:var(--text);min-height:100vh;transition:background .25s,color .25s;}
+button{font-family:inherit;}
+
+/* HEADER */
+header{position:sticky;top:0;z-index:200;background:var(--surface);border-bottom:1px solid var(--border);box-shadow:var(--shadow);height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;}
+.logo-wrap{display:flex;align-items:center;gap:12px;}
+.logo-wrap img{height:40px;width:40px;object-fit:contain;border-radius:6px;}
+.brand{font-size:18px;font-weight:700;color:var(--c2);}
+[data-theme="dark"] .brand{color:var(--c1);}
+.brand-sub{font-size:11px;color:var(--text3);letter-spacing:.4px;text-transform:uppercase;margin-top:1px;}
+.hdr-right{display:flex;align-items:center;gap:14px;}
+.live-badge{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--c2);background:#03c5ae18;border:1px solid #03c5ae44;border-radius:20px;padding:5px 12px;cursor:pointer;transition:background .2s;}
+.live-badge:hover{background:#03c5ae2e;}
+[data-theme="dark"] .live-badge{color:var(--c1);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--c1);animation:pulse 2s infinite;}
+.live-dot.error{background:#ef4444;animation:none;}
+.live-dot.loading{background:#f59e0b;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.theme-row{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text3);}
+.tog{position:relative;width:46px;height:24px;background:var(--border);border-radius:12px;cursor:pointer;border:none;transition:background .25s;}
+.tog.on{background:var(--grad);}
+.tog-knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:left .25s;pointer-events:none;display:flex;align-items:center;justify-content:center;font-size:10px;}
+.tog.on .tog-knob{left:25px;}
+
+/* LOADING SCREEN */
+#loadScreen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;}
+.load-logo{width:72px;height:72px;object-fit:contain;border-radius:14px;box-shadow:var(--shadow-lg);}
+.load-title{font-size:22px;font-weight:700;color:var(--c2);}
+[data-theme="dark"] .load-title{color:var(--c1);}
+.load-sub{font-size:13px;color:var(--text3);}
+.load-bar-wrap{width:260px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+.load-bar{height:100%;background:var(--grad);border-radius:2px;animation:loadAnim 1.6s ease-in-out infinite;}
+@keyframes loadAnim{0%{width:0;margin-left:0}50%{width:70%}100%{width:0;margin-left:100%}}
+
+/* MAIN */
+.main{max-width:1560px;margin:0 auto;padding:24px 28px 56px;}
+@media(max-width:768px){.main{padding:14px 14px 40px;}}
+
+/* ERROR STATE */
+.error-card{background:var(--surface);border:1px solid #ef444444;border-radius:var(--r);padding:32px;text-align:center;margin:40px auto;max-width:520px;box-shadow:var(--shadow);}
+.error-card .ico{font-size:36px;margin-bottom:10px;}
+.error-card h3{font-size:16px;font-weight:700;color:#ef4444;margin-bottom:8px;}
+.error-card p{font-size:13px;color:var(--text3);line-height:1.7;}
+.error-card code{display:block;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 14px;font-size:12px;font-family:'Courier New',monospace;color:var(--c1);margin:12px 0;word-break:break-all;}
+.btn-retry{margin-top:14px;padding:9px 24px;background:var(--grad);border:none;border-radius:var(--r-sm);color:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;}
+
+/* KPI STRIP */
+.kpi-strip{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:24px;}
+@media(max-width:1100px){.kpi-strip{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:600px){.kpi-strip{grid-template-columns:repeat(2,1fr);}}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow);cursor:pointer;transition:transform .18s,box-shadow .18s;position:relative;overflow:hidden;}
+.kpi::after{content:'';position:absolute;inset:0 0 auto 0;height:3px;background:var(--grad);}
+.kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);}
+.kpi-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;}
+.kpi-val{font-size:26px;font-weight:700;line-height:1.1;margin:6px 0 3px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.kpi-sub{font-size:11px;color:var(--text3);}
+.kpi-hint{font-size:10px;color:var(--c1);margin-top:5px;}
+
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:22px;overflow:visible;}
+.card-hdr{display:flex;align-items:center;gap:10px;padding:16px 22px 14px;border-bottom:1px solid var(--border);}
+.card-icon{width:32px;height:32px;flex-shrink:0;background:var(--grad);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;}
+.card-title{font-size:15px;font-weight:700;color:var(--text);}
+.card-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.card-body{padding:20px 22px;overflow:visible;}
+
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border);padding:0 22px;}
+.tab{padding:12px 18px;font-size:13px;font-weight:700;color:var(--text3);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:color .18s,border-color .18s;white-space:nowrap;}
+.tab.active{color:var(--c1);border-bottom-color:var(--c1);}
+.tab-pane{display:none;}
+.tab-pane.active{display:block;}
+
+/* FILTER ROW */
+.filter-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px;}
+.fld{display:flex;flex-direction:column;gap:5px;min-width:210px;}
+.fld-lbl{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;}
+
+/* CUSTOM SELECT */
+.cs-wrap{position:relative;}
+.cs-btn{width:100%;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:inherit;font-size:13px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;transition:border-color .18s;text-align:left;}
+.cs-btn:hover,.cs-btn.open{border-color:var(--c1);}
+.cs-val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+.cs-arr{font-size:9px;color:var(--c1);transition:transform .2s;flex-shrink:0;}
+.cs-btn.open .cs-arr{transform:rotate(180deg);}
+.cs-panel{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:var(--shadow-lg);z-index:9999;max-height:240px;display:none;flex-direction:column;}
+.cs-panel.up{top:auto;bottom:calc(100% + 6px);}
+.cs-panel.show{display:flex;}
+.cs-search{padding:8px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.cs-search input{width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 9px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);outline:none;}
+.cs-search input:focus{border-color:var(--c1);}
+.cs-list{overflow-y:auto;flex:1;}
+.cs-item{padding:8px 12px;font-size:13px;cursor:pointer;color:var(--text2);display:flex;align-items:center;gap:8px;transition:background .12s;}
+.cs-item:hover{background:var(--surface2);}
+.cs-item.sel{color:var(--c1);font-weight:700;}
+.cs-item input[type="checkbox"]{accent-color:var(--c1);flex-shrink:0;cursor:pointer;}
+.cs-item label{cursor:pointer;flex:1;}
+.cs-radio{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;transition:background .15s,border-color .15s;}
+.cs-item.sel .cs-radio{background:var(--c1);border-color:var(--c1);}
+
+/* BUTTONS */
+.btn-p{padding:9px 22px;background:var(--grad);border:none;border-radius:var(--r-sm);color:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;transition:opacity .18s,transform .18s;white-space:nowrap;}
+.btn-p:hover{opacity:.88;transform:translateY(-1px);}
+.btn-g{padding:9px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text3);font-family:inherit;font-size:13px;cursor:pointer;transition:border-color .18s,color .18s;white-space:nowrap;}
+.btn-g:hover{border-color:var(--c1);color:var(--c1);}
+
+/* RESULT META */
+.meta-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px;}
+.meta{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:13px 16px;}
+.meta-lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;}
+.meta-val{font-size:16px;font-weight:700;color:var(--c1);margin-top:4px;line-height:1.2;word-break:break-word;}
+.meta-val.lg{font-size:18px;}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;border-radius:var(--r-sm);border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead tr{background:var(--surface2);}
+th{padding:10px 13px;text-align:left;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--border);white-space:nowrap;}
+td{padding:9px 13px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--surface2);}
+tr.total-row td{background:linear-gradient(90deg,#03c5ae0d,transparent);font-weight:700;color:var(--text);border-top:2px solid var(--c1);}
+.tr{text-align:right;}
+
+/* PILLS */
+.pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;}
+.p-g{background:#03c5ae1a;color:#03c5ae;}
+.p-t{background:#00635c1a;color:#00635c;}
+.p-b{background:#3b82f61a;color:#3b82f6;}
+.p-o{background:#f59e0b1a;color:#d97706;}
+.p-r{background:#ef44441a;color:#dc2626;}
+.p-top{background:linear-gradient(135deg,#03c5ae1a,#00635c1a);color:var(--c1);border:1px solid #03c5ae66;}
+.p-tail{background:#f59e0b1a;color:#d97706;border:1px solid #f59e0b55;}
+
+/* PARETO BAR */
+.pbar-wrap{margin:2px 0;}
+.pbar-track{height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+.pbar-fill{height:100%;background:var(--grad);border-radius:3px;}
+.pbar-pct{font-size:11px;color:var(--text3);margin-top:2px;}
+
+/* MONTH DPO RESULT */
+.dpo-result{background:var(--grad);border-radius:var(--r);padding:24px 28px;color:#fff;text-align:center;margin-top:18px;display:none;}
+.dpo-result .big{font-size:56px;font-weight:700;line-height:1;}
+.dpo-result .lbl{font-size:14px;opacity:.88;margin-top:6px;}
+.dpo-result .det{font-size:12px;opacity:.7;margin-top:5px;}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.52);z-index:5000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.overlay.show{display:flex;}
+.modal{background:var(--surface);border-radius:var(--r);padding:28px;width:95%;max-width:700px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.28);border:1px solid var(--border);position:relative;}
+.modal h2{font-size:17px;font-weight:700;margin-bottom:5px;}
+.modal .sub{font-size:12px;color:var(--text3);margin-bottom:18px;}
+.modal-close{position:absolute;top:16px;right:18px;background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3);}
+.calc-block{background:var(--surface2);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:12px;border:1px solid var(--border);}
+.calc-block h4{font-size:11px;font-weight:700;color:var(--c1);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.calc-row{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px dashed var(--border);font-size:13px;color:var(--text2);gap:12px;}
+.calc-row:last-child{border-bottom:none;}
+.calc-row span:last-child{font-weight:700;color:var(--text);text-align:right;flex-shrink:0;}
+.formula{background:var(--bg);border-radius:var(--r-sm);padding:11px 14px;font-size:12px;font-family:'Courier New',monospace;color:var(--c1);border:1px solid var(--border);margin-top:10px;line-height:2;white-space:pre-wrap;}
+
+/* EMPTY */
+.empty{text-align:center;padding:40px 20px;color:var(--text3);}
+.empty .ico{font-size:32px;margin-bottom:8px;}
+.empty p{font-size:13px;}
+
+/* UTILS */
+.hidden{display:none!important;}
+.mt16{margin-top:16px;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.card{animation:fadeUp .35s ease both;}
+.card:nth-child(2){animation-delay:.05s}
+.card:nth-child(3){animation-delay:.1s}
+.card:nth-child(4){animation-delay:.15s}
+.card:nth-child(5){animation-delay:.2s}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--c1);}
+</style>
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div id="loadScreen">
+  <img class="load-logo" id="loadLogo" src="" alt="Scimplify">
+  <div class="load-title">Scimplify</div>
+  <div class="load-sub" id="loadMsg">Fetching live data from Google Sheets…</div>
+  <div class="load-bar-wrap"><div class="load-bar"></div></div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo-wrap">
+    <img id="logoImg" src="" alt="Scimplify">
+    <div>
+      <div class="brand">Scimplify</div>
+      <div class="brand-sub">Procurement Analytics Dashboard</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <button class="live-badge" onclick="refreshData()" title="Click to refresh live data">
+      <div class="live-dot" id="liveDot"></div>
+      <span id="liveStatus">Connecting…</span>
+    </button>
+    <div class="theme-row">
+      <span>☀</span>
+      <button class="tog" id="togBtn" onclick="toggleTheme()">
+        <div class="tog-knob" id="togKnob">☀</div>
+      </button>
+      <span>🌙</span>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN (hidden until data loads) -->
+<div class="main hidden" id="mainContent">
+
+  <!-- KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="kpi" onclick="showDpoModal()">
+      <div class="kpi-label">Weighted Avg DPO</div>
+      <div class="kpi-val" id="k-dpo">—</div>
+      <div class="kpi-sub">All PO lines</div>
+      <div class="kpi-hint">🔍 Click for breakdown</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Total PO Value</div>
+      <div class="kpi-val" id="k-total">—</div>
+      <div class="kpi-sub">INR</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Total PO Lines</div>
+      <div class="kpi-val" id="k-lines">—</div>
+      <div class="kpi-sub">Rows in dataset</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Unique Suppliers</div>
+      <div class="kpi-val" id="k-supp">—</div>
+      <div class="kpi-sub">Active</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Max DPO</div>
+      <div class="kpi-val" id="k-maxdpo">—</div>
+      <div class="kpi-sub">Days payable</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Avg PO Line Value</div>
+      <div class="kpi-val" id="k-avg">—</div>
+      <div class="kpi-sub">INR per line</div>
+    </div>
+  </div>
+
+  <!-- SECTION 1: SUPPLIER / PO SEARCH -->
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-icon">🔍</div>
+      <div>
+        <div class="card-title">Supplier & PO Search</div>
+        <div class="card-sub">Select one or more suppliers and / or PO numbers to view line-level detail</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="filter-row">
+        <div class="fld">
+          <div class="fld-lbl">Supplier</div>
+          <div class="cs-wrap">
+            <button class="cs-btn" id="sBtn" onclick="toggleDrop('sDrop','sBtn')">
+              <span class="cs-val" id="sBtnTxt">Select suppliers…</span><span class="cs-arr">▼</span>
+            </button>
+            <div class="cs-panel" id="sDrop">
+              <div class="cs-search"><input type="text" placeholder="Search supplier…" oninput="filterItems('sListW',this.value)"></div>
+              <div class="cs-list" id="sListW"></div>
+            </div>
+          </div>
+        </div>
+        <div class="fld">
+          <div class="fld-lbl">PO Number</div>
+          <div class="cs-wrap">
+            <button class="cs-btn" id="pBtn" onclick="toggleDrop('pDrop','pBtn')">
+              <span class="cs-val" id="pBtnTxt">Select PO numbers…</span><span class="cs-arr">▼</span>
+            </button>
+            <div class="cs-panel" id="pDrop">
+              <div class="cs-search"><input type="text" placeholder="Search PO…" oninput="filterItems('pListW',this.value)"></div>
+              <div class="cs-list" id="pListW"></div>
+            </div>
+          </div>
+        </div>
+        <button class="btn-p" onclick="runSupplierSearch()">Search</button>
+        <button class="btn-g" onclick="clearSection('s')">Clear</button>
+      </div>
+      <div id="sResult" class="hidden">
+        <div class="meta-row" id="sMeta"></div>
+        <div class="tbl-wrap">
+          <table><thead><tr>
+            <th>#</th><th>BU</th><th>Product</th><th>Qty</th><th>UOM</th>
+            <th>Amount (INR)</th><th>Payment Terms</th><th>DPO</th>
+          </tr></thead><tbody id="sTbody"></tbody></table>
+        </div>
+      </div>
+      <div class="empty" id="sEmpty"><div class="ico">🔍</div><p>Select a supplier or PO number and click Search</p></div>
+    </div>
+  </div>
+
+  <!-- SECTION 2: BU & BUYER ANALYSIS -->
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-icon">📊</div>
+      <div>
+        <div class="card-title">BU & Buyer Analysis</div>
+        <div class="card-sub">Deep-dive by Business Unit or by Buyer / POC</div>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('bu',this)">Business Unit (BU)</button>
+      <button class="tab" onclick="switchTab('buyer',this)">Buyer / POC</button>
+    </div>
+    <!-- BU -->
+    <div class="tab-pane active" id="tp-bu">
+      <div class="card-body">
+        <div class="filter-row">
+          <div class="fld">
+            <div class="fld-lbl">Business Unit</div>
+            <div class="cs-wrap">
+              <button class="cs-btn" id="buBtn" onclick="toggleDrop('buDrop','buBtn')">
+                <span class="cs-val" id="buBtnTxt">Select BU…</span><span class="cs-arr">▼</span>
+              </button>
+              <div class="cs-panel" id="buDrop">
+                <div class="cs-list" id="buListW"></div>
+              </div>
+            </div>
+          </div>
+          <button class="btn-p" onclick="runBuSearch()">Analyse</button>
+          <button class="btn-g" onclick="clearSection('bu')">Clear</button>
+        </div>
+        <div id="buResult" class="hidden">
+          <div class="meta-row" id="buMeta"></div>
+          <div class="tbl-wrap"><table><thead><tr>
+            <th>BU</th><th>Total PO Value (INR)</th><th>PO Count</th>
+            <th>Weighted DPO</th><th>Max DPO</th><th>Min DPO</th>
+          </tr></thead><tbody id="buTbody"></tbody></table></div>
+        </div>
+        <div class="empty" id="buEmpty"><div class="ico">🏢</div><p>Select a BU to see analysis</p></div>
+      </div>
+    </div>
+    <!-- Buyer -->
+    <div class="tab-pane" id="tp-buyer">
+      <div class="card-body">
+        <div class="filter-row">
+          <div class="fld">
+            <div class="fld-lbl">Buyer / POC</div>
+            <div class="cs-wrap">
+              <button class="cs-btn" id="buyerBtn" onclick="toggleDrop('buyerDrop','buyerBtn')">
+                <span class="cs-val" id="buyerBtnTxt">Select buyer…</span><span class="cs-arr">▼</span>
+              </button>
+              <div class="cs-panel" id="buyerDrop">
+                <div class="cs-list" id="buyerListW"></div>
+              </div>
+            </div>
+          </div>
+          <button class="btn-p" onclick="runBuyerSearch()">Analyse</button>
+          <button class="btn-g" onclick="clearSection('buyer')">Clear</button>
+        </div>
+        <div id="buyerResult" class="hidden">
+          <div class="meta-row" id="buyerMeta"></div>
+          <div class="tbl-wrap"><table><thead><tr>
+            <th>Buyer (POC)</th><th>Total PO Value (INR)</th><th>PO Count</th>
+            <th>Weighted DPO</th><th>BUs Covered</th><th>No. of Suppliers</th>
+          </tr></thead><tbody id="buyerTbody"></tbody></table></div>
+        </div>
+        <div class="empty" id="buyerEmpty"><div class="ico">👤</div><p>Select a buyer to see analysis</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 3: PARETO -->
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-icon">📈</div>
+      <div>
+        <div class="card-title">Supplier Pareto Analysis (80 / 20)</div>
+        <div class="card-sub">Suppliers ranked by spend — identify critical vs long-tail vendors</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="tbl-wrap">
+        <table><thead><tr>
+          <th>Rank</th><th>Supplier</th><th>PO Value (INR)</th>
+          <th>PO Count</th><th>Wtd DPO</th><th>% Spend</th><th>Cumulative %</th><th>Category</th>
+        </tr></thead><tbody id="paretoTbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECTION 4: MONTH-WISE DPO -->
+  <div class="card" style="overflow:visible;">
+    <div class="card-hdr">
+      <div class="card-icon">📅</div>
+      <div>
+        <div class="card-title">Month-wise Average DPO by Buyer</div>
+        <div class="card-sub">Select a buyer and month (derived from PO date) to calculate average DPO</div>
+      </div>
+    </div>
+    <div class="card-body" style="overflow:visible;">
+      <div class="filter-row" style="overflow:visible;">
+        <div class="fld">
+          <div class="fld-lbl">Buyer / POC</div>
+          <div class="cs-wrap">
+            <button class="cs-btn" id="mbBtn" onclick="toggleDrop('mbDrop','mbBtn',true)">
+              <span class="cs-val" id="mbBtnTxt">Select buyer…</span><span class="cs-arr">▼</span>
+            </button>
+            <div class="cs-panel" id="mbDrop">
+              <div class="cs-list" id="mbListW"></div>
+            </div>
+          </div>
+        </div>
+        <div class="fld">
+          <div class="fld-lbl">Month (from PO Date)</div>
+          <div class="cs-wrap">
+            <button class="cs-btn" id="moBtn" onclick="toggleDrop('moDrop','moBtn',true)">
+              <span class="cs-val" id="moBtnTxt">Select month…</span><span class="cs-arr">▼</span>
+            </button>
+            <div class="cs-panel" id="moDrop">
+              <div class="cs-list" id="moListW"></div>
+            </div>
+          </div>
+        </div>
+        <button class="btn-p" onclick="runMonthSearch()">Calculate</button>
+        <button class="btn-g" onclick="clearSection('month')">Clear</button>
+      </div>
+      <div id="monthResult" class="dpo-result"></div>
+      <div id="monthDetail" class="hidden mt16">
+        <div class="tbl-wrap"><table><thead><tr>
+          <th>PO No.</th><th>BU</th><th>Product</th><th>Supplier</th>
+          <th>Amount (INR)</th><th>DPO</th><th>PO Date</th>
+        </tr></thead><tbody id="monthTbody"></tbody></table></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<!-- DPO MODAL -->
+<div class="overlay" id="dpoOverlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeDpoModal()">×</button>
+    <h2>Weighted Average DPO — Calculation Breakdown</h2>
+    <p class="sub">Full formula and POC-level contribution — ready for manager presentation</p>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════
+const API = 'https://script.google.com/macros/s/AKfycbxgBxRi4ivorBwZx92m4jJQQSkfApsGtiGA1Eja5WygsLd2ItokPMYlCck1tF6njlni/exec';
+const MO  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let DATA = [];
+const selS  = new Set(); // suppliers
+const selP  = new Set(); // POs
+let selBU     = null;
+let selBuyer  = null;
+let selMBuyer = null;
+let selMonth  = null;
+
+// ═══════════════════════════════════════
+// LOGO
+// ═══════════════════════════════════════
+const LOGO = 'data:image/jpeg;base64,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';
+document.getElementById('logoImg').src  = LOGO;
+document.getElementById('loadLogo').src = LOGO;
+
+// ═══════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════
+window.addEventListener('load', () => {
+  document.addEventListener('click', e => { if(!e.target.closest('.cs-wrap')) closeAllDrops(); });
+  refreshData();
+});
+
+async function refreshData() {
+  setLiveStatus('loading', 'Fetching live data…');
+  document.getElementById('loadScreen').style.display = 'flex';
+  document.getElementById('mainContent').classList.add('hidden');
+
+  try {
+    const res = await fetch(API, { redirect: 'follow' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const json = await res.json();
+    if (!Array.isArray(json) || json.length === 0) throw new Error('Empty response');
+    DATA = normalise(json);
+    setLiveStatus('ok', 'Live · ' + new Date().toLocaleTimeString());
+    document.getElementById('loadScreen').style.display = 'none';
+    document.getElementById('mainContent').classList.remove('hidden');
+    init();
+  } catch (err) {
+    document.getElementById('loadScreen').style.display = 'none';
+    setLiveStatus('error', 'Error — click to retry');
+    document.getElementById('mainContent').innerHTML = `
+      <div class="error-card">
+        <div class="ico">⚠️</div>
+        <h3>Could not load live data</h3>
+        <p>The dashboard could not reach your Google Apps Script endpoint.<br>
+        Make sure the deployment is set to <strong>"Anyone"</strong> and is active.</p>
+        <code>${API}</code>
+        <p style="font-size:12px;margin-top:8px;">Error: ${err.message}</p>
+        <button class="btn-retry" onclick="refreshData()">Retry</button>
+      </div>`;
+    document.getElementById('mainContent').classList.remove('hidden');
+  }
+}
+
+function normalise(rows) {
+  return rows.map(r => {
+    const obj = {};
+    // copy all keys, trim strings
+    Object.keys(r).forEach(k => {
+      const v = r[k];
+      obj[k] = typeof v === 'string' ? v.trim() : v;
+    });
+    // force numeric
+    obj['Amount in INR'] = parseFloat(obj['Amount in INR']) || 0;
+    obj['DPO']           = parseInt(obj['DPO'])             || 0;
+    obj['qty']           = parseFloat(obj['qty'])           || 0;
+    // clean PO no
+    obj['PO no.'] = String(obj['PO no.'] || '').trim();
+    // derive Month_Year from PO date
+    const raw = obj['PO date'] || obj['PO_date_str'] || '';
+    const dt  = raw ? new Date(raw) : null;
+    obj['Month_Year'] = (dt && !isNaN(dt)) ? MO[dt.getMonth()] + ' ' + dt.getFullYear() : '';
+    obj['PO_date_str'] = (dt && !isNaN(dt)) ? dt.toISOString().slice(0,10) : String(raw).slice(0,10);
+    return obj;
+  }).filter(r => r['Supplier'] && r['Amount in INR'] > 0);
+}
+
+function setLiveStatus(state, msg) {
+  document.getElementById('liveStatus').textContent = msg;
+  const dot = document.getElementById('liveDot');
+  dot.className = 'live-dot' + (state==='error'?' error':state==='loading'?' loading':'');
+}
+
+function init() {
+  computeKPIs();
+  buildAllDropdowns();
+  buildPareto();
+}
+
+// ═══════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════
+const sumF  = (arr,k) => arr.reduce((s,r)=>s+(+r[k]||0),0);
+const uniq  = (arr,k) => [...new Set(arr.map(r=>r[k]).filter(Boolean))].sort();
+const wDpo  = rows => {
+  const tot = sumF(rows,'Amount in INR');
+  if(tot===0) return 0;
+  return rows.reduce((s,r)=>s+r['Amount in INR']*r['DPO'],0) / tot;
+};
+const fmt = n => {
+  if(n>=1e7) return '₹'+(n/1e7).toFixed(2)+' Cr';
+  if(n>=1e5) return '₹'+(n/1e5).toFixed(1)+' L';
+  return '₹'+n.toLocaleString('en-IN',{maximumFractionDigits:0});
+};
+const fmtFull = n => '₹'+n.toLocaleString('en-IN',{maximumFractionDigits:0});
+const dpoPill = d => {
+  if(d>=90)  return `<span class="pill p-o">${d}d</span>`;
+  if(d>=30)  return `<span class="pill p-b">${d}d</span>`;
+  return `<span class="pill p-g">${d}d</span>`;
+};
+
+// ═══════════════════════════════════════
+// KPIs
+// ═══════════════════════════════════════
+function computeKPIs() {
+  const total = sumF(DATA,'Amount in INR');
+  document.getElementById('k-dpo').textContent    = wDpo(DATA).toFixed(1);
+  document.getElementById('k-total').textContent  = fmt(total);
+  document.getElementById('k-lines').textContent  = DATA.length;
+  document.getElementById('k-supp').textContent   = new Set(DATA.map(r=>r['Supplier'])).size;
+  document.getElementById('k-maxdpo').textContent = Math.max(...DATA.map(r=>r['DPO']));
+  document.getElementById('k-avg').textContent    = fmt(total/DATA.length);
+}
+
+// ═══════════════════════════════════════
+// DROPDOWN ENGINE
+// ═══════════════════════════════════════
+function buildAllDropdowns() {
+  buildMulti('sListW',  uniq(DATA,'Supplier'), selS, updateSBtn);
+  buildMulti('pListW',  uniq(DATA,'PO no.'),   selP, updatePBtn);
+  buildRadio('buListW',    ['(All BUs)',    ...uniq(DATA,'BU')],  v=>{selBU    =v==='(All BUs)'   ?null:v; document.getElementById('buBtnTxt').textContent   =selBU   ||'All BUs';});
+  buildRadio('buyerListW', ['(All Buyers)',...uniq(DATA,'POC')], v=>{selBuyer =v==='(All Buyers)'?null:v; document.getElementById('buyerBtnTxt').textContent=selBuyer||'All Buyers';});
+  buildRadio('mbListW',    ['(All Buyers)',...uniq(DATA,'POC')], v=>{selMBuyer=v==='(All Buyers)'?null:v; document.getElementById('mbBtnTxt').textContent   =selMBuyer||'All Buyers';});
+  const months = [...new Set(DATA.map(r=>r['Month_Year']).filter(Boolean))].sort((a,b)=>{
+    const [ma,ya]=a.split(' '), [mb,yb]=b.split(' ');
+    return (+ya - +yb) || (MO.indexOf(ma) - MO.indexOf(mb));
+  });
+  buildRadio('moListW', months, v=>{selMonth=v; document.getElementById('moBtnTxt').textContent=v;});
+}
+
+function buildMulti(wid, items, state, updateFn) {
+  const wrap = document.getElementById(wid);
+  wrap.innerHTML = '';
+  // all row
+  const allD = mkItem();
+  const allCb = document.createElement('input'); allCb.type='checkbox'; allCb.checked=state.size===0;
+  const allLbl = document.createElement('label'); allLbl.textContent='Select All'; allLbl.style.cursor='pointer'; allLbl.style.flex='1';
+  allD.appendChild(allCb); allD.appendChild(allLbl);
+  allCb.addEventListener('change',()=>{
+    if(allCb.checked){ state.clear(); wrap.querySelectorAll('input[type=checkbox]').forEach((c,i)=>{ if(i>0){c.checked=false; c.closest('.cs-item').classList.remove('sel');} }); }
+    updateFn();
+  });
+  wrap.appendChild(allD);
+  items.forEach(item=>{
+    const d=mkItem(); d.dataset.val=item; if(state.has(item)) d.classList.add('sel');
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=state.has(item);
+    const lbl=document.createElement('label'); lbl.textContent=item; lbl.style.cursor='pointer'; lbl.style.flex='1';
+    d.appendChild(cb); d.appendChild(lbl);
+    cb.addEventListener('change',()=>{
+      if(cb.checked){state.add(item);d.classList.add('sel');allCb.checked=false;}
+      else{state.delete(item);d.classList.remove('sel');if(state.size===0)allCb.checked=true;}
+      updateFn();
+    });
+    wrap.appendChild(d);
+  });
+}
+
+function buildRadio(wid, items, onChange) {
+  const wrap = document.getElementById(wid);
+  wrap.innerHTML = '';
+  items.forEach(item=>{
+    const d=mkItem(); d.dataset.val=item;
+    const radio=document.createElement('div'); radio.className='cs-radio';
+    const span=document.createElement('span'); span.textContent=item;
+    d.appendChild(radio); d.appendChild(span);
+    d.addEventListener('click',()=>{
+      wrap.querySelectorAll('.cs-item').forEach(i=>i.classList.remove('sel'));
+      d.classList.add('sel'); onChange(item);
+    });
+    wrap.appendChild(d);
+  });
+}
+
+function mkItem(){ const d=document.createElement('div'); d.className='cs-item'; return d; }
+
+function filterItems(wid, q) {
+  document.getElementById(wid).querySelectorAll('.cs-item[data-val]').forEach(item=>{
+    item.style.display = item.dataset.val.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+
+function toggleDrop(panelId, btnId, preferUp=false) {
+  const panel=document.getElementById(panelId), btn=document.getElementById(btnId);
+  const wasOpen=panel.classList.contains('show');
+  closeAllDrops();
+  if(!wasOpen){
+    const rect=btn.getBoundingClientRect();
+    const spaceBelow=window.innerHeight-rect.bottom;
+    if(preferUp||spaceBelow<260) panel.classList.add('up'); else panel.classList.remove('up');
+    panel.classList.add('show'); btn.classList.add('open');
+  }
+}
+
+function closeAllDrops(){
+  document.querySelectorAll('.cs-panel.show').forEach(p=>p.classList.remove('show'));
+  document.querySelectorAll('.cs-btn.open').forEach(b=>b.classList.remove('open'));
+}
+
+function updateSBtn(){
+  document.getElementById('sBtnTxt').textContent = selS.size===0?'Select suppliers…':[...selS].slice(0,2).join(', ')+(selS.size>2?` +${selS.size-2} more`:'');
+}
+function updatePBtn(){
+  document.getElementById('pBtnTxt').textContent = selP.size===0?'Select PO numbers…':[...selP].slice(0,3).join(', ')+(selP.size>3?` +${selP.size-3} more`:'');
+}
+
+// ═══════════════════════════════════════
+// SECTION 1 — SUPPLIER SEARCH
+// ═══════════════════════════════════════
+function runSupplierSearch(){
+  let rows=DATA;
+  if(selS.size>0) rows=rows.filter(r=>selS.has(r['Supplier']));
+  if(selP.size>0) rows=rows.filter(r=>selP.has(r['PO no.']));
+  if(!rows.length){alert('No records found for the selected filters.');return;}
+  document.getElementById('sEmpty').classList.add('hidden');
+  document.getElementById('sResult').classList.remove('hidden');
+  const totalAmt=sumF(rows,'Amount in INR');
+  const pocs=[...new Set(rows.map(r=>r['POC']))];
+  const supps=[...new Set(rows.map(r=>r['Supplier']))];
+  const pos=[...new Set(rows.map(r=>r['PO no.']))];
+  document.getElementById('sMeta').innerHTML=`
+    <div class="meta"><div class="meta-lbl">Supplier(s)</div><div class="meta-val">${supps.length>1?supps.length+' suppliers':supps[0]}</div></div>
+    <div class="meta"><div class="meta-lbl">PO No(s)</div><div class="meta-val">${pos.length>3?pos.length+' POs':pos.join(', ')}</div></div>
+    <div class="meta"><div class="meta-lbl">Total Amount (INR)</div><div class="meta-val lg">${fmtFull(totalAmt)}</div></div>
+    <div class="meta"><div class="meta-lbl">POC(s)</div><div class="meta-val">${pocs.join(', ')}</div></div>
+    <div class="meta"><div class="meta-lbl">Wtd Avg DPO</div><div class="meta-val">${wDpo(rows).toFixed(1)} days</div></div>
+    <div class="meta"><div class="meta-lbl">PO Lines</div><div class="meta-val">${rows.length}</div></div>`;
+  document.getElementById('sTbody').innerHTML=rows.map((r,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td><span class="pill p-t">${r['BU']}</span></td>
+      <td style="max-width:200px;word-break:break-word;">${r['Product']}</td>
+      <td class="tr">${(+r['qty']||0).toLocaleString()}</td>
+      <td>${r['UOM']}</td>
+      <td class="tr">${fmtFull(r['Amount in INR'])}</td>
+      <td style="max-width:160px;font-size:12px;">${r['Payment terms']}</td>
+      <td>${dpoPill(r['DPO'])}</td>
+    </tr>`).join('')+`
+    <tr class="total-row">
+      <td colspan="5">TOTAL / WEIGHTED AVG DPO</td>
+      <td class="tr">${fmtFull(totalAmt)}</td><td></td>
+      <td>${dpoPill(Math.round(wDpo(rows)))}</td>
+    </tr>`;
+}
+
+// ═══════════════════════════════════════
+// SECTION 2A — BU
+// ═══════════════════════════════════════
+function runBuSearch(){
+  const bus=selBU?[selBU]:uniq(DATA,'BU');
+  const filtered=DATA.filter(r=>bus.includes(r['BU']));
+  document.getElementById('buEmpty').classList.add('hidden');
+  document.getElementById('buResult').classList.remove('hidden');
+  const totVal=sumF(filtered,'Amount in INR');
+  document.getElementById('buMeta').innerHTML=`
+    <div class="meta"><div class="meta-lbl">BU(s)</div><div class="meta-val">${bus.join(', ')}</div></div>
+    <div class="meta"><div class="meta-lbl">Total PO Value</div><div class="meta-val lg">${fmtFull(totVal)}</div></div>
+    <div class="meta"><div class="meta-lbl">PO Lines</div><div class="meta-val">${filtered.length}</div></div>
+    <div class="meta"><div class="meta-lbl">Wtd DPO</div><div class="meta-val">${wDpo(filtered).toFixed(1)} days</div></div>`;
+  const rows=bus.map(bu=>{
+    const r=DATA.filter(x=>x['BU']===bu);
+    return {bu,total:sumF(r,'Amount in INR'),count:r.length,wdpo:wDpo(r),max:Math.max(...r.map(x=>x['DPO'])),min:Math.min(...r.map(x=>x['DPO']))};
+  }).sort((a,b)=>b.total-a.total);
+  document.getElementById('buTbody').innerHTML=rows.map(s=>`
+    <tr>
+      <td><strong>${s.bu}</strong></td>
+      <td class="tr">${fmtFull(s.total)}</td>
+      <td class="tr">${s.count}</td>
+      <td>${dpoPill(Math.round(s.wdpo))} <span style="font-size:11px;color:var(--text3)">(${s.wdpo.toFixed(1)}d)</span></td>
+      <td><span class="pill p-o">${s.max}d</span></td>
+      <td><span class="pill p-g">${s.min}d</span></td>
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════════════
+// SECTION 2B — BUYER
+// ═══════════════════════════════════════
+function runBuyerSearch(){
+  const buyers=selBuyer?[selBuyer]:uniq(DATA,'POC');
+  const filtered=DATA.filter(r=>buyers.includes(r['POC']));
+  document.getElementById('buyerEmpty').classList.add('hidden');
+  document.getElementById('buyerResult').classList.remove('hidden');
+  const totVal=sumF(filtered,'Amount in INR');
+  document.getElementById('buyerMeta').innerHTML=`
+    <div class="meta"><div class="meta-lbl">Buyer(s)</div><div class="meta-val">${buyers.join(', ')}</div></div>
+    <div class="meta"><div class="meta-lbl">Total PO Value</div><div class="meta-val lg">${fmtFull(totVal)}</div></div>
+    <div class="meta"><div class="meta-lbl">Total PO Lines</div><div class="meta-val">${filtered.length}</div></div>
+    <div class="meta"><div class="meta-lbl">Overall Wtd DPO</div><div class="meta-val">${wDpo(filtered).toFixed(1)} days</div></div>`;
+  const rows=buyers.map(b=>{
+    const r=DATA.filter(x=>x['POC']===b);
+    return {buyer:b,total:sumF(r,'Amount in INR'),count:r.length,wdpo:wDpo(r),bus:[...new Set(r.map(x=>x['BU']))].join(', '),supps:new Set(r.map(x=>x['Supplier'])).size};
+  }).sort((a,b)=>b.total-a.total);
+  document.getElementById('buyerTbody').innerHTML=rows.map(s=>`
+    <tr>
+      <td><strong>${s.buyer}</strong></td>
+      <td class="tr">${fmtFull(s.total)}</td>
+      <td class="tr">${s.count}</td>
+      <td>${dpoPill(Math.round(s.wdpo))} <span style="font-size:11px;color:var(--text3)">(${s.wdpo.toFixed(1)}d)</span></td>
+      <td style="font-size:12px;">${s.bus}</td>
+      <td class="tr">${s.supps}</td>
+    </tr>`).join('');
+}
+
+// ═══════════════════════════════════════
+// SECTION 3 — PARETO
+// ═══════════════════════════════════════
+function buildPareto(){
+  const map={};
+  DATA.forEach(r=>{
+    const s=r['Supplier'];
+    if(!map[s]) map[s]={value:0,count:0,wsum:0};
+    map[s].value+=r['Amount in INR']; map[s].count++; map[s].wsum+=r['Amount in INR']*r['DPO'];
+  });
+  const total=Object.values(map).reduce((s,v)=>s+v.value,0);
+  const sorted=Object.entries(map).sort((a,b)=>b[1].value-a[1].value);
+  let cum=0;
+  document.getElementById('paretoTbody').innerHTML=sorted.map(([sup,v],i)=>{
+    const pct=v.value/total*100; cum+=pct;
+    const wdpo=v.value>0?v.wsum/v.value:0; const cat=cum<=80.5;
+    return `<tr>
+      <td>${i+1}</td>
+      <td style="max-width:220px;word-break:break-word;font-size:12px;">${sup}</td>
+      <td class="tr">${fmtFull(v.value)}</td>
+      <td class="tr">${v.count}</td>
+      <td>${dpoPill(Math.round(wdpo))}</td>
+      <td><div class="pbar-wrap"><div class="pbar-track"><div class="pbar-fill" style="width:${Math.min(pct*4,100)}%"></div></div><div class="pbar-pct">${pct.toFixed(1)}%</div></div></td>
+      <td>${cum.toFixed(1)}%</td>
+      <td><span class="pill ${cat?'p-top':'p-tail'}">${cat?'⭐ Top 80%':'Long Tail'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// SECTION 4 — MONTH-WISE DPO
+// ═══════════════════════════════════════
+function runMonthSearch(){
+  if(!selMBuyer&&!selMonth){alert('Please select at least a buyer or a month.');return;}
+  let rows=DATA;
+  if(selMBuyer) rows=rows.filter(r=>r['POC']===selMBuyer);
+  if(selMonth)  rows=rows.filter(r=>r['Month_Year']===selMonth);
+  if(!rows.length){alert('No PO data found for this buyer / month combination.');return;}
+  const avg=rows.reduce((s,r)=>s+r['DPO'],0)/rows.length;
+  const wdpo=wDpo(rows); const tot=sumF(rows,'Amount in INR');
+  const label=(selMBuyer||'All Buyers')+(selMonth?' — '+selMonth:'');
+  const res=document.getElementById('monthResult');
+  res.style.display='block';
+  res.innerHTML=`<div class="big">${wdpo.toFixed(1)}</div>
+    <div class="lbl">Weighted Avg DPO &nbsp;|&nbsp; ${label}</div>
+    <div class="det">${rows.length} PO lines &nbsp;·&nbsp; Simple Avg DPO: ${avg.toFixed(1)}d &nbsp;·&nbsp; Total Value: ${fmtFull(tot)}</div>`;
+  document.getElementById('monthDetail').classList.remove('hidden');
+  document.getElementById('monthTbody').innerHTML=rows.map(r=>`
+    <tr>
+      <td>${r['PO no.']}</td>
+      <td><span class="pill p-t">${r['BU']}</span></td>
+      <td style="max-width:160px;font-size:12px;">${r['Product']}</td>
+      <td style="font-size:12px;max-width:150px;">${r['Supplier']}</td>
+      <td class="tr">${fmtFull(r['Amount in INR'])}</td>
+      <td>${dpoPill(r['DPO'])}</td>
+      <td>${r['PO_date_str']}</td>
+    </tr>`).join('');
+  closeAllDrops();
+}
+
+// ═══════════════════════════════════════
+// CLEAR HELPERS
+// ═══════════════════════════════════════
+function clearSection(type){
+  if(type==='s'){
+    selS.clear(); selP.clear();
+    document.getElementById('sResult').classList.add('hidden');
+    document.getElementById('sEmpty').classList.remove('hidden');
+    buildAllDropdowns();
+  } else if(type==='bu'){
+    selBU=null;
+    document.getElementById('buResult').classList.add('hidden');
+    document.getElementById('buEmpty').classList.remove('hidden');
+    buildAllDropdowns();
+  } else if(type==='buyer'){
+    selBuyer=null;
+    document.getElementById('buyerResult').classList.add('hidden');
+    document.getElementById('buyerEmpty').classList.remove('hidden');
+    buildAllDropdowns();
+  } else if(type==='month'){
+    selMBuyer=null; selMonth=null;
+    document.getElementById('monthResult').style.display='none';
+    document.getElementById('monthDetail').classList.add('hidden');
+    document.getElementById('mbBtnTxt').textContent='Select buyer…';
+    document.getElementById('moBtnTxt').textContent='Select month…';
+    buildAllDropdowns();
+  }
+}
+
+// ═══════════════════════════════════════
+// DPO MODAL
+// ═══════════════════════════════════════
+function showDpoModal(){
+  const totalAmt=sumF(DATA,'Amount in INR');
+  const totalWt=DATA.reduce((s,r)=>s+r['Amount in INR']*r['DPO'],0);
+  const overall=totalAmt>0?totalWt/totalAmt:0;
+  const pocs=uniq(DATA,'POC').map(p=>{
+    const rows=DATA.filter(r=>r['POC']===p);
+    const amt=sumF(rows,'Amount in INR');
+    const wt=rows.reduce((s,r)=>s+r['Amount in INR']*r['DPO'],0);
+    return {poc:p,amt,wdpo:amt>0?wt/amt:0,pct:amt/totalAmt*100,contrib:wt/totalAmt};
+  }).sort((a,b)=>b.amt-a.amt);
+  document.getElementById('modalBody').innerHTML=`
+    <div class="calc-block">
+      <h4>Formula</h4>
+      <div class="formula">Weighted Avg DPO = Σ(PO Amount × DPO) ÷ Σ(PO Amount)
+
+= (${pocs.map(p=>`${fmt(p.amt)} × ${p.wdpo.toFixed(1)}`).join('\n  + ')})
+  ÷ ${fmt(totalAmt)}
+
+= ${overall.toFixed(2)} days</div>
+    </div>
+    <div class="calc-block">
+      <h4>Breakdown by Buyer (POC)</h4>
+      ${pocs.map(p=>`
+        <div class="calc-row">
+          <span><strong>${p.poc}</strong></span>
+          <span>Amt: ${fmt(p.amt)} &nbsp;|&nbsp; Wtd DPO: ${p.wdpo.toFixed(1)}d &nbsp;|&nbsp; Spend: ${p.pct.toFixed(1)}% &nbsp;|&nbsp; Contributes: ${p.contrib.toFixed(2)}d</span>
+        </div>`).join('')}
+      <div class="calc-row" style="border-top:2px solid var(--c1);margin-top:8px;padding-top:8px;">
+        <span><strong>Overall Weighted DPO</strong></span>
+        <span style="font-size:16px;color:var(--c1);font-weight:700;">${overall.toFixed(2)} days</span>
+      </div>
+    </div>
+    <div class="calc-block">
+      <h4>Why weighted average, not simple average?</h4>
+      <p style="font-size:13px;color:var(--text2);line-height:1.75;">
+        A simple average treats every PO line equally regardless of value. A ₹500 PO and a ₹50 Cr PO 
+        would count the same. Weighted average ensures that <strong>larger POs have proportionally more 
+        influence</strong>, which accurately reflects the real cash flow impact on the business.
+        For example, a ₹45 Cr Yellow Phosphorus PO on 90-day terms moves the DPO far more than a 
+        ₹5,000 packaging PO on 15 days — the weighted formula captures that correctly.
+      </p>
+    </div>`;
+  document.getElementById('dpoOverlay').classList.add('show');
+}
+function closeDpoModal(){ document.getElementById('dpoOverlay').classList.remove('show'); }
+document.getElementById('dpoOverlay').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeDpoModal(); });
+
+// ═══════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════
+function switchTab(id,btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tp-'+id).classList.add('active');
+}
+
+// ═══════════════════════════════════════
+// THEME
+// ═══════════════════════════════════════
+function toggleTheme(){
+  const isDark=document.documentElement.getAttribute('data-theme')==='dark';
+  const btn=document.getElementById('togBtn'), knob=document.getElementById('togKnob');
+  if(isDark){ document.documentElement.removeAttribute('data-theme'); btn.classList.remove('on'); knob.textContent='☀'; }
+  else { document.documentElement.setAttribute('data-theme','dark'); btn.classList.add('on'); knob.textContent='🌙'; }
+}
+</script>
+</body>
+</html>
