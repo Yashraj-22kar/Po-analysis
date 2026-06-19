@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scimplify — Procurement Analytics</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--c1:#03c5ae;--c2:#00635c;--grad:linear-gradient(135deg,#03c5ae,#00635c);--bg:#f2f5f7;--surface:#fff;--surface2:#f7f9fb;--border:#dde3ea;--text:#1c2b36;--text2:#3d5263;--text3:#7a93a6;--shadow:0 2px 12px rgba(0,99,92,.07);--shadow-lg:0 6px 28px rgba(0,99,92,.13);--r:12px;--r-sm:8px;}
+[data-theme="dark"]{--bg:#0e1318;--surface:#161d24;--surface2:#1c2530;--border:#283545;--text:#e4eff5;--text2:#9ab3c4;--text3:#5d7a8e;--shadow:0 2px 12px rgba(0,0,0,.35);--shadow-lg:0 6px 28px rgba(0,0,0,.5);}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Calibri','Segoe UI',Arial,sans-serif;font-size:14px;background:var(--bg);color:var(--text);transition:background .25s,color .25s;}
+button{font-family:inherit;}
+/* YEAR HUB */
+#hubPage{position:fixed;inset:0;z-index:900;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;overflow-y:auto;}
+.hub-header{text-align:center;margin-bottom:44px;}
+.hub-header img{width:64px;height:64px;object-fit:contain;border-radius:14px;margin-bottom:14px;}
+.hub-title{font-size:28px;font-weight:700;color:var(--text);}
+.hub-title span{background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hub-sub{font-size:14px;color:var(--text3);margin-top:6px;}
+.fy-grid{display:flex;flex-wrap:wrap;gap:20px;justify-content:center;max-width:900px;}
+.fy-card{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:28px 36px;min-width:180px;text-align:center;cursor:pointer;transition:transform .2s,box-shadow .2s,border-color .2s;box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.fy-card::before{content:'';position:absolute;inset:0 0 auto 0;height:3px;background:var(--grad);}
+.fy-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:var(--c1);}
+.fy-card.all{border-color:var(--c1);background:linear-gradient(135deg,rgba(3,197,174,.06),rgba(0,99,92,.06));}
+.fy-icon{font-size:28px;margin-bottom:10px;}
+.fy-lbl{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.fy-val{font-size:22px;font-weight:700;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.fy-sub{font-size:11px;color:var(--text3);margin-top:6px;}
+/* HEADER */
+header{position:sticky;top:0;z-index:200;background:var(--surface);border-bottom:1px solid var(--border);box-shadow:var(--shadow);height:62px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;}
+.logo-wrap{display:flex;align-items:center;gap:12px;}
+.logo-wrap img{height:40px;width:40px;object-fit:contain;border-radius:8px;}
+.brand{font-size:17px;font-weight:700;color:var(--c2);}
+[data-theme="dark"] .brand{color:var(--c1);}
+.brand-sub{font-size:11px;color:var(--text3);letter-spacing:.4px;text-transform:uppercase;}
+.hdr-right{display:flex;align-items:center;gap:12px;}
+.back-btn{padding:7px 14px;background:transparent;border:1px solid var(--border);border-radius:20px;color:var(--text3);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:border-color .18s,color .18s;}
+.back-btn:hover{border-color:var(--c1);color:var(--c1);}
+.fy-badge{background:linear-gradient(135deg,#03c5ae18,#00635c18);border:1px solid #03c5ae44;border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700;color:var(--c1);}
+.live-badge{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--c2);background:#03c5ae18;border:1px solid #03c5ae44;border-radius:20px;padding:5px 12px;cursor:pointer;}
+[data-theme="dark"] .live-badge{color:var(--c1);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--c1);animation:pulse 2s infinite;}
+.live-dot.err{background:#ef4444;animation:none;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.tog-wrap{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text3);}
+.tog{position:relative;width:44px;height:24px;background:var(--border);border-radius:12px;cursor:pointer;border:none;transition:background .25s;}
+.tog.on{background:var(--grad);}
+.tog-knob{position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:left .25s;pointer-events:none;display:flex;align-items:center;justify-content:center;font-size:10px;}
+.tog.on .tog-knob{left:23px;}
+/* MAIN */
+.main{max-width:1560px;margin:0 auto;padding:24px 28px 56px;}
+/* KPI */
+.kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:24px;}
+@media(max-width:1100px){.kpi-strip{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:640px){.kpi-strip{grid-template-columns:repeat(2,1fr);}}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow);cursor:pointer;transition:transform .18s,box-shadow .18s;position:relative;overflow:hidden;}
+.kpi::after{content:'';position:absolute;inset:0 0 auto 0;height:3px;background:var(--grad);}
+.kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);}
+.kpi-lbl{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;}
+.kpi-val{font-size:26px;font-weight:700;margin:6px 0 3px;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.kpi-sub{font-size:11px;color:var(--text3);}
+.kpi-hint{font-size:10px;color:var(--c1);margin-top:5px;}
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);margin-bottom:22px;overflow:visible;position:relative;}
+.card-hdr{display:flex;align-items:center;gap:10px;padding:16px 22px 14px;border-bottom:1px solid var(--border);}
+.card-icon{width:32px;height:32px;flex-shrink:0;background:var(--grad);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;color:#fff;}
+.card-title{font-size:15px;font-weight:700;color:var(--text);}
+.card-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.card-body{padding:20px 22px;overflow:visible;position:relative;}
+/* TABS */
+.tabs{display:flex;border-bottom:1px solid var(--border);padding:0 22px;}
+.tab{padding:12px 18px;font-size:13px;font-weight:700;color:var(--text3);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:color .18s,border-color .18s;white-space:nowrap;}
+.tab.active{color:var(--c1);border-bottom-color:var(--c1);}
+.tab-pane{display:none;overflow:visible;} .tab-pane.active{display:block;overflow:visible;}
+/* FILTER */
+.filter-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px;overflow:visible;}
+.fld{display:flex;flex-direction:column;gap:5px;min-width:210px;overflow:visible;position:relative;}
+.fld-lbl{font-size:11px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;}
+.cs-wrap{position:relative;overflow:visible;}
+.cs-btn{width:100%;padding:9px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text);font-family:inherit;font-size:13px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px;transition:border-color .18s;text-align:left;}
+.cs-btn:hover,.cs-btn.open{border-color:var(--c1);}
+.cs-val{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+.cs-arr{font-size:9px;color:var(--c1);transition:transform .2s;flex-shrink:0;}
+.cs-btn.open .cs-arr{transform:rotate(180deg);}
+.cs-panel{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);box-shadow:0 8px 32px rgba(0,0,0,0.22);z-index:99999;max-height:260px;display:none;flex-direction:column;}
+/* up handled by JS */
+.cs-panel.show{display:flex;}
+.cs-search{padding:8px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.cs-search input{width:100%;border:1px solid var(--border);border-radius:6px;padding:6px 9px;font-size:12px;font-family:inherit;background:var(--surface2);color:var(--text);outline:none;}
+.cs-search input:focus{border-color:var(--c1);}
+.cs-list{overflow-y:auto;flex:1;}
+.cs-item{padding:8px 12px;font-size:13px;cursor:pointer;color:var(--text2);display:flex;align-items:center;gap:8px;transition:background .12s;}
+.cs-item:hover{background:var(--surface2);}
+.cs-item.sel{color:var(--c1);font-weight:700;}
+.cs-item input[type="checkbox"]{accent-color:var(--c1);flex-shrink:0;cursor:pointer;}
+.cs-item label{cursor:pointer;flex:1;}
+.cs-radio{width:14px;height:14px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;transition:background .15s,border-color .15s;}
+.cs-item.sel .cs-radio{background:var(--c1);border-color:var(--c1);}
+/* BUTTONS */
+.btn-p{padding:9px 22px;background:var(--grad);border:none;border-radius:var(--r-sm);color:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;transition:opacity .18s,transform .18s;white-space:nowrap;}
+.btn-p:hover{opacity:.88;transform:translateY(-1px);}
+.btn-g{padding:9px 14px;background:transparent;border:1px solid var(--border);border-radius:var(--r-sm);color:var(--text3);font-family:inherit;font-size:13px;cursor:pointer;transition:border-color .18s,color .18s;white-space:nowrap;}
+.btn-g:hover{border-color:var(--c1);color:var(--c1);}
+/* META CARDS */
+.meta-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px;}
+.meta{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:13px 16px;}
+.meta-lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;}
+.meta-val{font-size:16px;font-weight:700;color:var(--c1);margin-top:4px;word-break:break-word;}
+.meta-val.lg{font-size:19px;}
+/* TABLE */
+.tbl-wrap{overflow-x:auto;border-radius:var(--r-sm);border:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead tr{background:var(--surface2);}
+th{padding:10px 13px;text-align:left;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--border);white-space:nowrap;}
+td{padding:9px 13px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--surface2);}
+tr.total-row td{background:linear-gradient(90deg,#03c5ae0d,transparent);font-weight:700;color:var(--text);border-top:2px solid var(--c1);}
+.tr{text-align:right;}
+/* PILLS */
+.pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;}
+.p-g{background:#03c5ae1a;color:#03c5ae;}.p-t{background:#00635c1a;color:#00635c;}.p-b{background:#3b82f61a;color:#3b82f6;}.p-o{background:#f59e0b1a;color:#d97706;}.p-r{background:#ef44441a;color:#dc2626;}.p-top{background:linear-gradient(135deg,#03c5ae1a,#00635c1a);color:var(--c1);border:1px solid #03c5ae66;}.p-tail{background:#f59e0b1a;color:#d97706;border:1px solid #f59e0b55;}
+/* MISC */
+.pbar-wrap{margin:2px 0;}.pbar-track{height:6px;background:var(--border);border-radius:3px;overflow:hidden;}.pbar-fill{height:100%;background:var(--grad);border-radius:3px;}
+.pbar-pct{font-size:11px;color:var(--text3);margin-top:2px;}
+.dpo-result{background:var(--grad);border-radius:var(--r);padding:24px 28px;color:#fff;text-align:center;margin-top:18px;display:none;}
+.dpo-result .big{font-size:56px;font-weight:700;line-height:1;}
+.dpo-result .lbl{font-size:14px;opacity:.88;margin-top:6px;}
+.dpo-result .det{font-size:12px;opacity:.7;margin-top:5px;}
+.empty{text-align:center;padding:40px 20px;color:var(--text3);}
+.empty .ico{font-size:32px;margin-bottom:8px;}
+.hidden{display:none!important;}
+.mt16{margin-top:16px;}
+/* MODALS */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.52);z-index:5000;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px);}
+.overlay.show{display:flex;}
+.modal{background:var(--surface);border-radius:var(--r);padding:28px;width:95%;max-width:700px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.28);border:1px solid var(--border);position:relative;}
+.modal h2{font-size:17px;font-weight:700;margin-bottom:5px;}
+.modal .sub{font-size:12px;color:var(--text3);margin-bottom:18px;}
+.modal-close{position:absolute;top:16px;right:18px;background:none;border:none;font-size:22px;cursor:pointer;color:var(--text3);}
+.calc-block{background:var(--surface2);border-radius:var(--r-sm);padding:14px 16px;margin-bottom:12px;border:1px solid var(--border);}
+.calc-block h4{font-size:11px;font-weight:700;color:var(--c1);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;}
+.calc-row{display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:1px dashed var(--border);font-size:13px;color:var(--text2);gap:12px;}
+.calc-row:last-child{border-bottom:none;}
+.calc-row span:last-child{font-weight:700;color:var(--text);text-align:right;flex-shrink:0;}
+.formula{background:var(--bg);border-radius:var(--r-sm);padding:11px 14px;font-size:12px;font-family:'Courier New',monospace;color:var(--c1);border:1px solid var(--border);margin-top:10px;line-height:2;white-space:pre-wrap;}
+/* OVERLAP NOTICE */
+#overlapNotice{margin-bottom:18px;}
+/* TREE */
+.tree-node{display:inline-block;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:16px 22px;cursor:pointer;text-align:center;transition:border-color .2s,transform .18s,box-shadow .18s;min-width:200px;box-shadow:var(--shadow);}
+.tree-node:hover{border-color:var(--c1);transform:translateY(-2px);box-shadow:var(--shadow-lg);}
+.root-node{background:var(--grad);color:#fff;border-color:transparent;min-width:260px;}
+.root-node .tree-node-val{color:#fff;-webkit-text-fill-color:#fff;}
+.root-node .tree-node-label,.root-node .tree-node-sub{color:rgba(255,255,255,.8);}
+.tree-node-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text3);margin-bottom:6px;}
+.tree-node-val{font-size:22px;font-weight:700;background:var(--grad);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.tree-node-sub{font-size:11px;color:var(--text3);margin-top:4px;}
+.tree-node-hint{font-size:10px;color:var(--c1);margin-top:6px;}
+.tree-connector{width:2px;height:28px;background:var(--border);margin:0 auto;}
+.tree-row{display:flex;justify-content:center;gap:32px;flex-wrap:wrap;}
+.tree-leaf-box{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;margin:0 20px;}
+.tree-leaf-hdr{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;flex-wrap:wrap;gap:8px;}
+.tree-badge-dom{color:var(--c2);font-size:12px;font-weight:700;margin-bottom:8px;}
+.tree-badge-imp{color:#3b82f6;font-size:12px;font-weight:700;margin-bottom:8px;}
+/* PARETO COLLAPSE */
+#paretoBody{display:none;}
+#paretoChevron{font-size:18px;color:var(--c1);margin-left:auto;transition:transform .25s;}
+/* CHART */
+#monthChartWrap{background:var(--surface2);border:1px solid var(--border);border-radius:var(--r-sm);padding:18px 20px;}
+/* SEGMENT MODAL */
+.seg-tabs{display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:16px;}
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--c1);}
+/* card animations removed to prevent stacking context issues with dropdowns */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--c1);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
+.hub-spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,0.15);border-top-color:#03c5ae;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px;}
+
+/* ═══════════════════════════════════════
+   ANIMATED HUB BACKGROUND
+═══════════════════════════════════════ */
+#hubPage {
+  background: linear-gradient(-45deg, #060f0e, #00635c, #03c5ae22, #051a19);
+  background-size: 400% 400%;
+  animation: hubGrad 12s ease infinite;
+  overflow: hidden;
+}
+@keyframes hubGrad {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+/* Floating particles */
+.hub-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(3,197,174,0.12);
+  animation: floatUp linear infinite;
+  pointer-events: none;
+}
+@keyframes floatUp {
+  0%   { transform: translateY(110vh) scale(0); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: .35; }
+  100% { transform: translateY(-15vh) scale(1); opacity: 0; }
+}
+/* Hub header text adjustments for dark bg */
+#hubPage .hub-title { color: #fff; }
+#hubPage .hub-title span {
+  background: linear-gradient(135deg, #03c5ae, #7ffff0);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+#hubPage .hub-sub { color: rgba(255,255,255,0.55); }
+
+/* ═══════════════════════════════════════
+   FY CARD — glass morphism on dark bg
+═══════════════════════════════════════ */
+.fy-card {
+  background: rgba(255,255,255,0.07) !important;
+  border: 1px solid rgba(3,197,174,0.25) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: #fff;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3) !important;
+  transition: transform .28s cubic-bezier(.34,1.56,.64,1),
+              box-shadow .28s ease,
+              border-color .28s ease,
+              background .28s ease !important;
+}
+.fy-card:hover {
+  transform: translateY(-8px) scale(1.03) !important;
+  background: rgba(3,197,174,0.18) !important;
+  border-color: rgba(3,197,174,0.7) !important;
+  box-shadow: 0 20px 48px rgba(3,197,174,0.25), 0 0 0 1px rgba(3,197,174,0.3) !important;
+}
+.fy-card.all {
+  background: rgba(3,197,174,0.15) !important;
+  border-color: rgba(3,197,174,0.5) !important;
+}
+.fy-card .fy-lbl { color: rgba(255,255,255,0.55); }
+.fy-card .fy-val {
+  background: linear-gradient(135deg, #03c5ae, #7ffff0) !important;
+  -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+}
+.fy-card .fy-sub { color: rgba(255,255,255,0.45); }
+.fy-card .fy-icon { filter: drop-shadow(0 0 8px rgba(3,197,174,0.5)); }
+
+/* ═══════════════════════════════════════
+   PAGE TRANSITIONS
+═══════════════════════════════════════ */
+@keyframes pageSlideOutLeft {
+  from { opacity:1; transform: translateX(0) scale(1); }
+  to   { opacity:0; transform: translateX(-80px) scale(0.96); }
+}
+@keyframes pageSlideInRight {
+  from { opacity:0; transform: translateX(80px) scale(0.96); }
+  to   { opacity:1; transform: translateX(0) scale(1); }
+}
+@keyframes pageSlideOutRight {
+  from { opacity:1; transform: translateX(0) scale(1); }
+  to   { opacity:0; transform: translateX(80px) scale(0.96); }
+}
+@keyframes pageSlideInLeft {
+  from { opacity:0; transform: translateX(-80px) scale(0.96); }
+  to   { opacity:1; transform: translateX(0) scale(1); }
+}
+@keyframes pageZoomFadeIn {
+  from { opacity:0; transform: scale(0.94); }
+  to   { opacity:1; transform: scale(1); }
+}
+.anim-out-left  { animation: pageSlideOutLeft  .38s cubic-bezier(.4,0,1,1) both; }
+.anim-out-right { animation: pageSlideOutRight .38s cubic-bezier(.4,0,1,1) both; }
+.anim-in-right  { animation: pageSlideInRight  .42s cubic-bezier(.16,1,.3,1) both; }
+.anim-in-left   { animation: pageSlideInLeft   .42s cubic-bezier(.16,1,.3,1) both; }
+.anim-zoom-in   { animation: pageZoomFadeIn    .42s cubic-bezier(.16,1,.3,1) both; }
+
+/* ═══════════════════════════════════════
+   BUTTON HOVER ANIMATIONS
+═══════════════════════════════════════ */
+.btn-p {
+  position: relative; overflow: hidden;
+  box-shadow: 0 4px 16px rgba(3,197,174,0.3);
+  transition: transform .22s cubic-bezier(.34,1.56,.64,1),
+              box-shadow .22s ease, opacity .2s !important;
+}
+.btn-p:hover {
+  transform: translateY(-3px) scale(1.03) !important;
+  box-shadow: 0 8px 28px rgba(3,197,174,0.45) !important;
+  opacity: 1 !important;
+}
+.btn-p:active { transform: translateY(0) scale(0.98) !important; }
+
+/* Ripple effect on btn-p */
+.btn-p::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: rgba(255,255,255,0.15);
+  border-radius: inherit;
+  transform: scale(0); opacity: 0;
+  transition: transform .4s ease, opacity .4s ease;
+}
+.btn-p:active::after { transform: scale(2); opacity: 0; transition: 0s; }
+
+.btn-g {
+  transition: border-color .2s, color .2s,
+              transform .22s cubic-bezier(.34,1.56,.64,1),
+              box-shadow .2s !important;
+}
+.btn-g:hover {
+  border-color: var(--c1) !important; color: var(--c1) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(3,197,174,0.15) !important;
+}
+
+/* Back button */
+.back-btn {
+  transition: border-color .2s, color .2s,
+              transform .22s cubic-bezier(.34,1.56,.64,1),
+              box-shadow .2s !important;
+}
+.back-btn:hover {
+  transform: translateX(-3px) !important;
+  box-shadow: 0 4px 12px rgba(3,197,174,0.12) !important;
+}
+
+/* Live badge pulse on hover */
+.live-badge {
+  transition: background .2s, transform .2s, box-shadow .2s;
+}
+.live-badge:hover {
+  transform: scale(1.04);
+  box-shadow: 0 4px 14px rgba(3,197,174,0.25);
+}
+
+/* ═══════════════════════════════════════
+   KPI CARD HOVER
+═══════════════════════════════════════ */
+.kpi {
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1),
+              box-shadow .25s ease !important;
+}
+.kpi:hover {
+  transform: translateY(-5px) !important;
+  box-shadow: 0 12px 36px rgba(3,197,174,0.18) !important;
+}
+
+/* ═══════════════════════════════════════
+   CARD HOVER
+═══════════════════════════════════════ */
+.card {
+  transition: box-shadow .25s ease, transform .25s ease;
+}
+.card:hover {
+  box-shadow: 0 8px 32px rgba(3,197,174,0.12);
+}
+
+/* ═══════════════════════════════════════
+   TABLE ROW HOVER
+═══════════════════════════════════════ */
+tr { transition: background .15s; }
+
+/* ═══════════════════════════════════════
+   MODAL ENTRANCE
+═══════════════════════════════════════ */
+.overlay.show .modal {
+  animation: pageZoomFadeIn .35s cubic-bezier(.16,1,.3,1) both;
+}
+
+/* ═══════════════════════════════════════
+   FY CARD ENTRANCE STAGGER
+═══════════════════════════════════════ */
+@keyframes cardEntrance {
+  from { opacity:0; transform: translateY(30px) scale(0.95); }
+  to   { opacity:1; transform: translateY(0) scale(1); }
+}
+.fy-card { animation: cardEntrance .5s cubic-bezier(.16,1,.3,1) both; }
+.fy-card:nth-child(1){ animation-delay: .05s; }
+.fy-card:nth-child(2){ animation-delay: .12s; }
+.fy-card:nth-child(3){ animation-delay: .19s; }
+.fy-card:nth-child(4){ animation-delay: .26s; }
+
+</style>
+</head>
+<body>
+
+<!-- YEAR HUB -->
+<div id="hubPage">
+  <div class="hub-header">
+    <img id="hubLogo" src="" alt="Scimplify">
+    <div class="hub-title">Welcome to <span>Scimplify</span></div>
+    <div class="hub-sub">Select a financial year to begin your spend analysis</div>
+  </div>
+  <div id="fyGrid" class="fy-grid">
+    <div style="text-align:center;color:var(--text3);">
+      <div class="hub-spinner"></div>
+      <div id="loadMsg" style="font-size:13px;">Loading live data...</div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashPage" style="display:none;">
+<header>
+  <div class="logo-wrap">
+    <img id="headerLogo" src="" alt="Scimplify">
+    <div>
+      <div class="brand">Scimplify</div>
+      <div class="brand-sub">Procurement Analytics</div>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <button class="back-btn" onclick="goHub()">&#8592; Year Select</button>
+    <span class="fy-badge" id="fyBadge">Overall</span>
+    <button class="live-badge" onclick="refreshLive()">
+      <div class="live-dot" id="liveDot"></div>
+      <span id="liveStatus">Live</span>
+    </button>
+    <div class="tog-wrap">
+      <span>☀</span>
+      <button class="tog" id="togBtn" onclick="toggleTheme()"><div class="tog-knob" id="togKnob">☀</div></button>
+      <span>🌙</span>
+    </div>
+  </div>
+</header>
+<div class="main">
+  <!-- KPI -->
+  <div class="kpi-strip">
+    <div class="kpi" onclick="showDpoModal()">
+      <div class="kpi-lbl">Weighted Avg DPO</div><div class="kpi-val" id="k-dpo">—</div>
+      <div class="kpi-sub">All PO lines</div><div class="kpi-hint">&#128269; Click for breakdown</div>
+    </div>
+    <div class="kpi" onclick="showTotalPOModal()" style="cursor:pointer;">
+      <div class="kpi-lbl">Total PO Value</div><div class="kpi-val" id="k-total">—</div>
+      <div class="kpi-sub">INR</div><div class="kpi-hint">&#128269; Import vs Domestic</div>
+    </div>
+    <div class="kpi" onclick="showAllSuppliersModal()" style="cursor:pointer;">
+      <div class="kpi-lbl">Unique Suppliers</div>
+      <div class="kpi-val" id="k-supp">—</div>
+      <div class="kpi-sub" id="k-supp-sub">Unique across all POs</div>
+      <div class="kpi-hint">&#128269; Click to view full list</div>
+    </div>
+    <div class="kpi" onclick="showSegmentModal('export')" style="cursor:pointer;">
+      <div class="kpi-lbl">Import Spend</div><div class="kpi-val" id="k-imp">—</div>
+      <div class="kpi-sub" id="k-imp-sub">Country &#8800; India</div><div class="kpi-hint">&#128269; 80/20 Analysis</div>
+    </div>
+    <div class="kpi" onclick="showSegmentModal('domestic')" style="cursor:pointer;">
+      <div class="kpi-lbl">Domestic Spend</div><div class="kpi-val" id="k-dom">—</div>
+      <div class="kpi-sub" id="k-dom-sub">Country = India</div><div class="kpi-hint">&#128269; 80/20 Analysis</div>
+    </div>
+  </div>
+  <!-- OVERLAP -->
+  <div id="overlapNotice" style="display:none;margin-bottom:18px;">
+    <div style="background:#f59e0b12;border:1px solid #f59e0b44;border-radius:10px;padding:12px 18px;display:flex;align-items:flex-start;gap:12px;">
+      <span style="font-size:18px;">&#9888;&#65039;</span>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#d97706;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Supplier Overlap Detected</div>
+        <div style="font-size:13px;color:var(--text2);" id="overlapText"></div>
+      </div>
+    </div>
+  </div>
+  <!-- S1: SUPPLIER SEARCH -->
+  <div class="card">
+    <div class="card-hdr"><div class="card-icon">&#128269;</div><div><div class="card-title">Supplier &amp; PO Search</div><div class="card-sub">Filter by supplier, country and/or PO number</div></div></div>
+    <div class="card-body">
+      <div class="filter-row">
+        <div class="fld"><div class="fld-lbl">Supplier</div><div class="cs-wrap"><button class="cs-btn" id="sBtn" onclick="toggleDrop('sDrop','sBtn')"><span class="cs-val" id="sBtnTxt">Select suppliers...</span><span class="cs-arr">&#9660;</span></button><div class="cs-panel" id="sDrop"><div class="cs-search"><input type="text" placeholder="Search..." oninput="filterItems('sListW',this.value)"></div><div class="cs-list" id="sListW"></div></div></div></div>
+        <div class="fld"><div class="fld-lbl">Country</div><div class="cs-wrap"><button class="cs-btn" id="cntBtn" onclick="toggleDrop('cntDrop','cntBtn')"><span class="cs-val" id="cntBtnTxt">Select countries...</span><span class="cs-arr">&#9660;</span></button><div class="cs-panel" id="cntDrop"><div class="cs-search"><input type="text" placeholder="Search..." oninput="filterItems('cntListW',this.value)"></div><div class="cs-list" id="cntListW"></div></div></div></div>
+        <div class="fld"><div class="fld-lbl">PO Number</div><div class="cs-wrap"><button class="cs-btn" id="pBtn" onclick="toggleDrop('pDrop','pBtn')"><span class="cs-val" id="pBtnTxt">Select PO numbers...</span><span class="cs-arr">&#9660;</span></button><div class="cs-panel" id="pDrop"><div class="cs-search"><input type="text" placeholder="Search..." oninput="filterItems('pListW',this.value)"></div><div class="cs-list" id="pListW"></div></div></div></div>
+        <button class="btn-p" onclick="runSupplierSearch()">Search</button>
+        <button class="btn-g" onclick="clearS()">Clear</button>
+      </div>
+      <div id="sResult" class="hidden"><div class="meta-row" id="sMeta"></div><div class="tbl-wrap"><table><thead><tr><th>#</th><th>BU</th><th>Country</th><th>Product</th><th>Qty</th><th>UOM</th><th>Amount (INR)</th><th>Payment Terms</th><th>DPO</th></tr></thead><tbody id="sTbody"></tbody></table></div></div>
+      <div class="empty" id="sEmpty"><div class="ico">&#128269;</div><p>Select a supplier or PO number and click Search</p></div>
+    </div>
+  </div>
+  <!-- S2: BU & BUYER -->
+  <div class="card">
+    <div class="card-hdr"><div class="card-icon">&#128202;</div><div><div class="card-title">BU &amp; Buyer Analysis</div><div class="card-sub">Deep-dive by Business Unit or Buyer / POC</div></div></div>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('bu',this)">Business Unit (BU)</button>
+      <button class="tab" onclick="switchTab('buyer',this)">Buyer / POC</button>
+    </div>
+    <div class="tab-pane active" id="tp-bu"><div class="card-body">
+      <div class="filter-row">
+        <div class="fld"><div class="fld-lbl">Business Unit</div><div class="cs-wrap"><button class="cs-btn" id="buBtn" onclick="toggleDrop('buDrop','buBtn')"><span class="cs-val" id="buBtnTxt">Select BU...</span><span class="cs-arr">&#9660;</span></button><div class="cs-panel" id="buDrop"><div class="cs-list" id="buListW"></div></div></div></div>
+        <button class="btn-p" onclick="runBuSearch()">Analyse</button><button class="btn-g" onclick="clearBu()">Clear</button>
+      </div>
+      <div id="buResult" class="hidden"><div class="meta-row" id="buMeta"></div><div class="tbl-wrap"><table><thead><tr><th>BU</th><th>Countries</th><th>Total PO Value (INR)</th><th>PO Count</th><th>Weighted DPO</th><th>Max DPO</th><th>Min DPO</th></tr></thead><tbody id="buTbody"></tbody></table></div></div>
+      <div class="empty" id="buEmpty"><div class="ico">&#127970;</div><p>Select a BU to see analysis</p></div>
+    </div></div>
+    <div class="tab-pane" id="tp-buyer"><div class="card-body">
+      <div class="filter-row">
+        <div class="fld"><div class="fld-lbl">Buyer / POC</div><div class="cs-wrap"><button class="cs-btn" id="buyerBtn" onclick="toggleDrop('buyerDrop','buyerBtn')"><span class="cs-val" id="buyerBtnTxt">Select buyer...</span><span class="cs-arr">&#9660;</span></button><div class="cs-panel" id="buyerDrop"><div class="cs-list" id="buyerListW"></div></div></div></div>
+        <button class="btn-p" onclick="runBuyerSearch()">Analyse</button><button class="btn-g" onclick="clearBuyer()">Clear</button>
+      </div>
+      <div id="buyerResult" class="hidden"><div class="meta-row" id="buyerMeta"></div><div class="tbl-wrap"><table><thead><tr><th>Buyer (POC)</th><th>Total PO Value (INR)</th><th>PO Count</th><th>Weighted DPO</th><th>BUs Covered</th><th>Countries</th><th>Suppliers</th></tr></thead><tbody id="buyerTbody"></tbody></table></div></div>
+      <div class="empty" id="buyerEmpty"><div class="ico">&#128100;</div><p>Select a buyer to see analysis</p></div>
+    </div></div>
+  </div>
+  <!-- S3: PARETO -->
+  <div class="card">
+    <div class="card-hdr" onclick="togglePareto()" style="cursor:pointer;user-select:none;">
+      <div class="card-icon">&#128200;</div>
+      <div style="flex:1;"><div class="card-title">Supplier Pareto Analysis (80/20)</div><div class="card-sub">Ranked by spend &mdash; click to expand / collapse</div></div>
+      <div id="paretoChevron">&#9660;</div>
+    </div>
+    <div id="paretoBody"><div class="card-body"><div class="tbl-wrap"><table><thead><tr><th>Rank</th><th>Supplier</th><th>PO Value (INR)</th><th>PO Count</th><th>% Spend</th><th>Cumulative %</th><th>Category</th></tr></thead><tbody id="paretoTbody"></tbody></table></div></div></div>
+  </div>
+  <!-- S4: MONTH DPO -->
+  <div class="card" style="overflow:visible;">
+    <div class="card-hdr"><div class="card-icon">&#128197;</div><div><div class="card-title">Month-wise DPO Trend by Buyer</div><div class="card-sub">Select buyer to view trend &mdash; optionally filter by month</div></div></div>
+    <div class="card-body" style="overflow:visible;">
+      <div class="filter-row" style="overflow:visible;">
+        <div class="fld"><div class="fld-lbl">Buyer / POC</div><div class="cs-wrap"><button class="cs-btn" id="mbBtn" onclick="toggleDrop('mbDrop','mbBtn',true)"><span class="cs-val" id="mbBtnTxt">Select buyer...</span><span class="cs-arr">&#9660;</span></button><div class="cs-panel" id="mbDrop"><div class="cs-list" id="mbListW"></div></div></div></div>
+        <div class="fld"><div class="fld-lbl">Month (optional)</div><div class="cs-wrap"><button class="cs-btn" id="moBtn" onclick="toggleDrop('moDrop','moBtn',true)"><span class="cs-val" id="moBtnTxt">Select month...</span><span class="cs-arr">&#9660;</span></button><div class="cs-panel" id="moDrop"><div class="cs-list" id="moListW"></div></div></div></div>
+        <button class="btn-p" onclick="runMonthSearch()">Calculate</button>
+        <button class="btn-g" onclick="clearMonth()">Clear</button>
+      </div>
+      <div id="monthChartWrap" class="hidden mt16"><div style="font-size:12px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;" id="chartTitle">Monthly Wtd Avg DPO Trend</div><div style="position:relative;height:200px;width:100%;"><canvas id="dpoLineChart"></canvas></div></div>
+      <div id="monthResult" class="dpo-result"></div>
+      <div id="monthDetail" class="hidden mt16"><div class="tbl-wrap"><table><thead><tr><th>PO No.</th><th>BU</th><th>Product</th><th>Supplier</th><th>Amount (INR)</th><th>DPO</th><th>PO Date</th></tr></thead><tbody id="monthTbody"></tbody></table></div></div>
+    </div>
+  </div>
+  <!-- S5: SPEND TREE -->
+  <div class="card">
+    <div class="card-hdr"><div class="card-icon">&#127795;</div><div><div class="card-title">Spend Concentration Map</div><div class="card-sub">Total Spend &#8594; Domestic / Import &#8594; Top ~80% Suppliers</div></div></div>
+    <div class="card-body">
+      <div style="text-align:center;margin-bottom:8px;">
+        <div class="tree-node root-node" onclick="treeToggle('treeL1')">
+          <div class="tree-node-label">Total PO Value</div>
+          <div class="tree-node-val" id="treeRoot">—</div>
+          <div class="tree-node-sub">Click to expand</div>
+        </div>
+      </div>
+      <div id="treeL1" class="hidden">
+        <div class="tree-connector"></div>
+        <div class="tree-row">
+          <div class="tree-node" onclick="treeToggle('treeDom')" style="min-width:220px;">
+            <div class="tree-badge-dom">&#127968; Domestic</div>
+            <div class="tree-node-val" id="treeDomVal">—</div>
+            <div class="tree-node-sub" id="treeDomSub">—</div>
+            <div class="tree-node-hint">Click for top suppliers</div>
+          </div>
+          <div class="tree-node" onclick="treeToggle('treeImp')" style="min-width:220px;">
+            <div class="tree-badge-imp">&#127760; Import</div>
+            <div class="tree-node-val" id="treeImpVal">—</div>
+            <div class="tree-node-sub" id="treeImpSub">—</div>
+            <div class="tree-node-hint">Click for top suppliers</div>
+          </div>
+        </div>
+        <div id="treeDom" class="hidden"><div class="tree-connector"></div><div class="tree-leaf-box"><div class="tree-leaf-hdr"><span>&#127968; Domestic &mdash; Top ~80% Suppliers</span><span id="treeDomWdpo" style="font-size:12px;color:var(--c1);font-weight:700;"></span></div><div id="treeDomAlert" style="margin-bottom:10px;"></div><div class="tbl-wrap"><table><thead><tr><th>Rank</th><th>Supplier</th><th>PO Value (INR)</th><th>PO Count</th><th>% Spend</th><th>Cum %</th><th>Wtd DPO</th></tr></thead><tbody id="treeDomBody"></tbody></table></div></div></div>
+        <div id="treeImp" class="hidden"><div class="tree-connector"></div><div class="tree-leaf-box"><div class="tree-leaf-hdr"><span>&#127760; Import &mdash; Top ~80% Suppliers</span><span id="treeImpWdpo" style="font-size:12px;color:var(--c1);font-weight:700;"></span></div><div id="treeImpAlert" style="margin-bottom:10px;"></div><div class="tbl-wrap"><table><thead><tr><th>Rank</th><th>Supplier</th><th>PO Value (INR)</th><th>PO Count</th><th>% Spend</th><th>Cum %</th><th>Wtd DPO</th></tr></thead><tbody id="treeImpBody"></tbody></table></div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DPO IMPROVEMENT TRACKER -->
+  <div class="card" id="dpoImproveCard">
+    <div class="card-hdr">
+      <div class="card-icon" style="background:linear-gradient(135deg,#f59e0b,#d97706);">&#127919;</div>
+      <div style="flex:1;">
+        <div class="card-title">DPO Improvement Tracker</div>
+        <div class="card-sub">Current DPO vs Targeted DPO (EOY) — live from your improvement sheet</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span id="dpoImpStatus" style="font-size:11px;color:var(--text3);"></span>
+        <button class="btn-g" style="font-size:11px;padding:6px 12px;" onclick="loadDPOImprove()">&#8635; Refresh</button>
+      </div>
+    </div>
+
+    <!-- KPI Summary Strip -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:16px 22px;border-bottom:1px solid var(--border);">
+      <div class="meta"><div class="meta-lbl">Suppliers Tracked</div><div class="meta-val" id="dim-count">—</div></div>
+      <div class="meta"><div class="meta-lbl">Avg Current DPO</div><div class="meta-val" id="dim-cur">—</div></div>
+      <div class="meta"><div class="meta-lbl">Avg Target DPO</div><div class="meta-val" id="dim-tgt" style="color:#03c5ae;">—</div></div>
+      <div class="meta"><div class="meta-lbl">Avg DPO to Improve</div><div class="meta-val" id="dim-gap" style="color:#d97706;">—</div></div>
+      <div class="meta"><div class="meta-lbl">&#10003; Target Achieved</div><div class="meta-val" id="dim-ok" style="color:#03c5ae;">—</div></div>
+      <div class="meta"><div class="meta-lbl">&#9650; Pending Improvement</div><div class="meta-val" id="dim-bad" style="color:#d97706;">—</div></div>
+    </div>
+
+    <div class="card-body" style="overflow:visible;">
+      <!-- Filters -->
+      <div class="filter-row" style="margin-bottom:16px;overflow:visible;">
+        <div class="fld" style="min-width:180px;">
+          <div class="fld-lbl">Filter by POC</div>
+          <div class="cs-wrap">
+            <button class="cs-btn" id="dimPocBtn" onclick="toggleDrop('dimPocDrop','dimPocBtn')">
+              <span class="cs-val" id="dimPocTxt">All POCs</span><span class="cs-arr">&#9660;</span>
+            </button>
+            <div class="cs-panel" id="dimPocDrop">
+              <div class="cs-list" id="dimPocList"></div>
+            </div>
+          </div>
+        </div>
+        <div class="fld" style="min-width:180px;">
+          <div class="fld-lbl">Filter by Country</div>
+          <div class="cs-wrap">
+            <button class="cs-btn" id="dimCntBtn" onclick="toggleDrop('dimCntDrop','dimCntBtn')">
+              <span class="cs-val" id="dimCntTxt">All Countries</span><span class="cs-arr">&#9660;</span>
+            </button>
+            <div class="cs-panel" id="dimCntDrop">
+              <div class="cs-list" id="dimCntList"></div>
+            </div>
+          </div>
+        </div>
+        <button class="btn-g" onclick="clearDPOFilters()">Clear</button>
+      </div>
+
+      <!-- Table -->
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th>
+            <th>Supplier</th>
+            <th>Product</th>
+            <th>Country</th>
+            <th>POC</th>
+            <th style="text-align:center;">Current DPO</th>
+            <th style="text-align:center;">Target DPO (EOY)</th>
+            <th style="min-width:200px;">Progress towards Target</th>
+          </tr></thead>
+          <tbody id="dpoImpTbody">
+            <tr><td colspan="10" style="text-align:center;padding:40px;color:var(--text3);">
+              <div style="font-size:28px;margin-bottom:10px;">&#128279;</div>
+              <div style="font-size:14px;font-weight:600;margin-bottom:6px;">Click Refresh to load DPO Improvement data</div>
+              <div style="font-size:12px;">Fetches live from your Google Sheet</div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPPLIER PO DETAIL MODAL (from DPO tracker) -->
+  <div class="overlay" id="dpoSuppOverlay">
+    <div class="modal" style="max-width:820px;">
+      <button class="modal-close" onclick="closeModal('dpoSuppOverlay')">&#215;</button>
+      <h2 id="dpoSuppTitle">Supplier PO Details</h2>
+      <p class="sub" id="dpoSuppSub">All POs from main procurement sheet</p>
+      <div class="meta-row" id="dpoSuppMeta" style="margin-bottom:16px;"></div>
+      <div class="tbl-wrap">
+        <table><thead><tr>
+          <th>PO No.</th><th>BU</th><th>Product</th><th>Amount (INR)</th>
+          <th>Payment Terms</th><th>Current DPO</th><th>Target DPO</th><th>PO Date</th>
+        </tr></thead>
+        <tbody id="dpoSuppBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- /dashPage -->
+
+<!-- MODALS -->
+<div class="overlay" id="dpoOverlay"><div class="modal"><button class="modal-close" onclick="closeModal('dpoOverlay')">&#215;</button><h2>Weighted Average DPO &mdash; Calculation Breakdown</h2><p class="sub">Full formula and POC-level contribution</p><div id="dpoBody"></div></div></div>
+<div class="overlay" id="segOverlay"><div class="modal" style="max-width:820px;"><button class="modal-close" onclick="closeModal('segOverlay')">&#215;</button><h2 id="segTitle">—</h2><p class="sub" id="segSub"></p><div class="meta-row" id="segSummary" style="margin-bottom:16px;"></div><div class="seg-tabs tabs"><button class="tab active" id="seg80Tab" onclick="switchSegTab('80')">&#11088; Top 80% Suppliers</button><button class="tab" id="seg20Tab" onclick="switchSegTab('20')">Long Tail 20%</button></div><div id="seg80Pane"><div id="seg80Alert" style="margin-bottom:10px;"></div><div class="meta-row" id="seg80Meta"></div><div class="tbl-wrap"><table><thead><tr><th>Rank</th><th>Supplier</th><th>PO Value (INR)</th><th>PO Count</th><th>% Spend</th><th>Cum %</th><th>Wtd DPO</th></tr></thead><tbody id="seg80Body"></tbody></table></div></div><div id="seg20Pane" style="display:none;"><div id="seg20Alert" style="margin-bottom:10px;"></div><div class="meta-row" id="seg20Meta"></div><div class="tbl-wrap"><table><thead><tr><th>Rank</th><th>Supplier</th><th>PO Value (INR)</th><th>PO Count</th><th>% Spend</th><th>Cum %</th><th>Wtd DPO</th></tr></thead><tbody id="seg20Body"></tbody></table></div></div></div></div>
+<div class="overlay" id="tpoOverlay"><div class="modal" style="max-width:860px;"><button class="modal-close" onclick="closeModal('tpoOverlay')">&#215;</button><h2>Total PO Value &mdash; Import vs Domestic</h2><p class="sub">Full spend bifurcation with 80/20 Pareto analysis</p><div class="meta-row" id="tpoSummary" style="margin-bottom:16px;"></div><div class="tabs"><button class="tab active" id="tpoImpTab" onclick="switchTpoTab('imp',this)">&#127760; Import</button><button class="tab" id="tpoDomTab" onclick="switchTpoTab('dom',this)">&#127968; Domestic</button></div><div id="tpoImpPane"><div id="tpoImpAlert" style="margin-bottom:10px;"></div><div class="meta-row" id="tpoImpMeta"></div><div class="tbl-wrap"><table><thead><tr><th>Rank</th><th>Supplier</th><th>PO Value (INR)</th><th>PO Count</th><th>% Spend</th><th>Cum %</th><th>Category</th></tr></thead><tbody id="tpoImpBody"></tbody></table></div></div><div id="tpoDomPane" style="display:none;"><div id="tpoDomAlert" style="margin-bottom:10px;"></div><div class="meta-row" id="tpoDomMeta"></div><div class="tbl-wrap"><table><thead><tr><th>Rank</th><th>Supplier</th><th>PO Value (INR)</th><th>PO Count</th><th>% Spend</th><th>Cum %</th><th>Category</th></tr></thead><tbody id="tpoDomBody"></tbody></table></div></div></div></div>
+
+<script>
+
+
+const API   = 'https://script.google.com/macros/s/AKfycbyJQx_DdG007gWEV0vspq7LTUmIuLZJsH061gk9WpuQF_6AjrgnlbejuMUCGmE_A92B/exec';
+const MO    = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+let DATA=[], ALL_DATA=[], CURRENT_FY='Overall';
+const selS=new Set(), selP=new Set(), selCnt=new Set();
+let selBU=null,selBuyer=null,selMBuyer=null,selMonth=null;
+
+// Set logos
+(function(){
+  const L='data:image/jpeg;base64,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';
+  ['hubLogo','headerLogo'].forEach(id=>{const el=document.getElementById(id);if(el)el.src=L;});
+})();
+
+window.addEventListener('load',()=>{
+  document.addEventListener('click',e=>{if(!e.target.closest('.cs-wrap'))closeAllDrops();});
+  spawnHubParticles();
+  loadData();
+});
+
+function spawnHubParticles(){
+  const hub=document.getElementById('hubPage'); if(!hub) return;
+  for(let i=0;i<20;i++){
+    const p=document.createElement('div'); p.className='hub-particle';
+    const sz=Math.random()*100+20;
+    p.style.cssText='width:'+sz+'px;height:'+sz+'px;left:'+Math.random()*100+'%;animation-duration:'+(Math.random()*18+8)+'s;animation-delay:'+(-Math.random()*18)+'s;opacity:'+(Math.random()*0.15+0.03);
+    hub.appendChild(p);
+  }
+}
+
+// ── LOAD ──
+// ── LOAD: embedded instant + live in background ──
+async function loadData(){
+  // Show spinner while fetching live data
+  const g=document.getElementById('fyGrid');
+  if(g) g.innerHTML='<div style="text-align:center;color:rgba(255,255,255,0.7);"><div class="hub-spinner" style="border-color:rgba(255,255,255,0.2);border-top-color:#03c5ae;"></div><div id="loadMsg" style="margin-top:10px;font-size:13px;">Connecting to Google Sheets...</div></div>';
+
+  let secs=0;
+  const msgTimer=setInterval(()=>{
+    secs+=5;
+    const el=document.getElementById('loadMsg');
+    if(el) el.textContent=secs<15?'Fetching your live data ('+(secs)+'s)...':'Almost there ('+(secs)+'s)...';
+  },5000);
+
+  try {
+    const ctrl=new AbortController();
+    setTimeout(()=>ctrl.abort(),30000);
+    const res=await fetch(API,{redirect:'follow',signal:ctrl.signal});
+    clearInterval(msgTimer);
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const text=await res.text();
+    const json=JSON.parse(text);
+    if(!Array.isArray(json)||json.length===0) throw new Error('No data returned from sheet');
+    ALL_DATA=normalise(json);
+    DATA=ALL_DATA;
+    setStatus('ok','Live - '+new Date().toLocaleTimeString());
+    buildFYHub();
+  } catch(err){
+    clearInterval(msgTimer);
+    setStatus('err','Error');
+    if(g) g.innerHTML=`
+      <div style="text-align:center;padding:20px;max-width:460px;">
+        <div style="font-size:36px;margin-bottom:10px;">&#9888;&#65039;</div>
+        <div style="font-weight:700;font-size:15px;color:#ef4444;margin-bottom:8px;">Could not load live data</div>
+        <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:10px 14px;font-size:12px;color:rgba(255,255,255,0.7);margin-bottom:14px;text-align:left;line-height:1.7;">
+          <strong>Error:</strong> ${err.message}<br><br>
+          <strong>Fix:</strong> Go to your Google Sheet &#8594; Extensions &#8594; Apps Script &#8594; Deploy &#8594; New Deployment &#8594; Anyone &#8594; Deploy &#8594; send new URL
+        </div>
+        <button class="btn-p" onclick="loadData()" style="margin-right:8px;">Retry</button>
+      </div>`;
+  }
+}
+
+async function refreshLive(){
+  setStatus('loading','Refreshing...');
+  try {
+    const ctrl=new AbortController();
+    setTimeout(()=>ctrl.abort(),20000);
+    const res=await fetch(API,{redirect:'follow',signal:ctrl.signal});
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const text=await res.text();
+    const json=JSON.parse(text);
+    if(!Array.isArray(json)||json.length===0) throw new Error('Empty response');
+    ALL_DATA=normalise(json);
+    DATA=CURRENT_FY==='Overall'?ALL_DATA:ALL_DATA.filter(r=>getFY(r.PO_date_str)===CURRENT_FY);
+    setStatus('ok','Live - '+new Date().toLocaleTimeString());
+    init();
+  } catch(e){ setStatus('err','Error - click retry'); }
+}
+
+// ── HELPERS ──
+const sumF=(arr,k)=>arr.reduce((s,r)=>s+(+r[k]||0),0);
+const uniq=(arr,k)=>[...new Set(arr.map(r=>r[k]).filter(Boolean))].sort();
+const wDpo=rows=>{const t=sumF(rows,'Amount in INR');return t>0?rows.reduce((s,r)=>s+r['Amount in INR']*r.DPO,0)/t:0;};
+const fmt=n=>n>=1e7?'&#8377;'+(n/1e7).toFixed(2)+' Cr':n>=1e5?'&#8377;'+(n/1e5).toFixed(1)+' L':'&#8377;'+n.toLocaleString('en-IN',{maximumFractionDigits:0});
+const fmtFull=n=>'&#8377;'+n.toLocaleString('en-IN',{maximumFractionDigits:0});
+const dpoPill=d=>d>=90?`<span class="pill p-o">${d}d</span>`:d>=30?`<span class="pill p-b">${d}d</span>`:`<span class="pill p-g">${d}d</span>`;
+const isDom=r=>(r.Country||r.Entity||'').trim().toLowerCase()==='india';
+const isImp=r=>!isDom(r);
+
+function setStatus(state,msg){
+  const s=document.getElementById('liveStatus'),d=document.getElementById('liveDot');
+  if(s)s.textContent=msg;
+  if(d)d.className='live-dot'+(state==='err'?' err':'');
+}
+
+function normalise(rows){
+  return rows.map(r=>{
+    const o={};
+    Object.keys(r).forEach(k=>{o[k.trim()]=typeof r[k]==='string'?r[k].trim():r[k];});
+    o['Amount in INR']=parseFloat(o['Amount in INR'])||0;
+    o['DPO']=parseInt(o['DPO'])||0;
+    o['qty']=parseFloat(o['qty'])||0;
+    o['PO no.']=(o['PO no.']||o['PO no']||'').toString().trim();
+    const raw=o['PO_date_str']||o['PO date']||o['PO Date']||'';
+    const dt=new Date(raw);
+    o['PO_date_str']=isNaN(dt)?String(raw).slice(0,10):dt.toISOString().slice(0,10);
+    o['Month_Year']=isNaN(dt)?'':(MO[dt.getMonth()]+' '+dt.getFullYear());
+    o['Country']=(o['Country']||o['Entity']||'').toString().trim();
+    return o;
+  }).filter(r=>r['Supplier']&&r['Amount in INR']>0);
+}
+
+function getFY(d){
+  const dt=new Date(d);if(isNaN(dt))return null;
+  const m=dt.getMonth(),y=dt.getFullYear(),s=m>=3?y:y-1;
+  return 'FY '+s+'-'+String(s+1).slice(2);
+}
+
+// ── YEAR HUB ──
+function buildFYHub(){
+  const fySet=new Set();
+  ALL_DATA.forEach(r=>{const fy=getFY(r.PO_date_str);if(fy)fySet.add(fy);});
+  const fys=[...fySet].sort();
+  const g=document.getElementById('fyGrid');if(!g)return;
+  let h=`<div class="fy-card all" onclick="selectFY('Overall')"><div class="fy-icon">&#127760;</div><div class="fy-val" style="margin-top:8px;">Overall</div><div class="fy-sub">${ALL_DATA.length} PO lines &middot; ${new Set(ALL_DATA.map(r=>r.Supplier)).size} suppliers</div></div>`;
+  fys.forEach((fy,i)=>{
+    const r2=ALL_DATA.filter(r=>getFY(r.PO_date_str)===fy);
+    const tot=sumF(r2,'Amount in INR');
+    h+=`<div class="fy-card" onclick="selectFY('${fy}')" style="animation-delay:${(i+1)*0.1}s"><div class="fy-icon">&#128197;</div><div class="fy-lbl">Financial Year</div><div class="fy-val">${fy}</div><div class="fy-sub">${r2.length} PO lines &middot; &#8377;${(tot/1e7).toFixed(1)} Cr</div></div>`;
+  });
+  g.innerHTML=h;
+}
+
+function selectFY(fy){
+  CURRENT_FY=fy;
+  const b=document.getElementById('fyBadge');if(b)b.textContent=fy;
+  DATA=fy==='Overall'?ALL_DATA:ALL_DATA.filter(r=>getFY(r.PO_date_str)===fy);
+  // Show DPO Improvement only for Overall and latest FY
+  const fySet=new Set();
+  ALL_DATA.forEach(r=>{const f=getFY(r.PO_date_str);if(f)fySet.add(f);});
+  const latestFY=[...fySet].sort().pop()||'';
+  const showDPOTracker = (fy==='Overall'||fy===latestFY);
+  const dpoCard=document.getElementById('dpoImproveCard');
+  if(dpoCard) dpoCard.style.display=showDPOTracker?'block':'none';
+  const hub=document.getElementById('hubPage');
+  const dash=document.getElementById('dashPage');
+  hub.classList.add('anim-out-left');
+  setTimeout(()=>{
+    hub.style.display='none';
+    hub.classList.remove('anim-out-left');
+    dash.style.display='block';
+    dash.classList.add('anim-in-right');
+    setTimeout(()=>dash.classList.remove('anim-in-right'),500);
+    init();
+    if(showDPOTracker) loadDPOImprove();
+  }, 360);
+}
+
+function goHub(){
+  selS.clear();selP.clear();selBU=null;selBuyer=null;selMBuyer=null;selMonth=null;
+  const hub=document.getElementById('hubPage');
+  const dash=document.getElementById('dashPage');
+  dash.classList.add('anim-out-right');
+  setTimeout(()=>{
+    dash.style.display='none';
+    dash.classList.remove('anim-out-right');
+    hub.style.display='flex';
+    hub.classList.add('anim-in-left');
+    setTimeout(()=>hub.classList.remove('anim-in-left'),500);
+  }, 360);
+}
+
+// ── INIT ──
+function init(){
+  computeKPIs();
+  buildAllDropdowns();
+  buildPareto();
+  initSpendTree();
+}
+
+// ── KPIs ──
+function computeKPIs(){
+  const total   = sumF(DATA,'Amount in INR');
+  const impR    = DATA.filter(isImp);
+  const domR    = DATA.filter(isDom);
+
+  // Unique supplier counts — deduped by trimmed name
+  const allSupp  = new Set(DATA.map(r=>r.Supplier.trim()));
+  const impSupp  = new Set(impR.map(r=>r.Supplier.trim()));
+  const domSupp  = new Set(domR.map(r=>r.Supplier.trim()));
+  // Overlap = suppliers in both segments
+  const overlap  = [...impSupp].filter(s=>domSupp.has(s));
+  const overlapN = overlap.length;
+
+  document.getElementById('k-dpo').innerHTML   = wDpo(DATA).toFixed(1);
+  document.getElementById('k-total').innerHTML = fmt(total);
+
+  // Unique Suppliers KPI — total unique, clickable
+  document.getElementById('k-supp').textContent = allSupp.size;
+  document.getElementById('k-supp-sub').textContent =
+    overlapN > 0 ? overlapN+' in both segments' : 'Unique across all POs';
+
+  document.getElementById('k-imp').innerHTML       = fmt(sumF(impR,'Amount in INR'));
+  document.getElementById('k-imp-sub').textContent = impSupp.size+' unique suppliers';
+
+  document.getElementById('k-dom').innerHTML       = fmt(sumF(domR,'Amount in INR'));
+  document.getElementById('k-dom-sub').textContent = domSupp.size+' unique suppliers';
+
+  detectOverlap(impR, domR);
+}
+
+// ── OVERLAP ──
+function detectOverlap(impR,domR){
+  const is=new Set(impR.map(r=>r.Supplier)),ds=new Set(domR.map(r=>r.Supplier));
+  const ov=[...is].filter(s=>ds.has(s));
+  const n=document.getElementById('overlapNotice'),t=document.getElementById('overlapText');
+  if(!n||!t)return;
+  if(!ov.length){n.style.display='none';return;}
+  n.style.display='block';
+  t.innerHTML=ov.length+' supplier'+(ov.length>1?'s appear':'appears')+' in both Import & Domestic: '+
+    ov.map(s=>'<strong>'+s+'</strong>').join(', ');
+}
+
+// ── PARETO HELPERS ──
+function nearestTo80(pcts){let c=0,b=-1,bd=999;for(let i=0;i<pcts.length;i++){c+=pcts[i];const d=Math.abs(c-80);if(c>=77&&c<=83&&d<bd){bd=d;b=i;}}return b;}
+function paretoRows(rows){
+  const map={};
+  rows.forEach(r=>{const s=r.Supplier;if(!map[s])map[s]={v:0,c:0,dw:0};map[s].v+=r['Amount in INR'];map[s].c++;map[s].dw+=r['Amount in INR']*r.DPO;});
+  const tot=Object.values(map).reduce((s,v)=>s+v.v,0);
+  const sorted=Object.entries(map).sort((a,b)=>b[1].v-a[1].v);
+  const si=nearestTo80(sorted.map(([,v])=>v.v/tot*100));
+  let cum=0;const top80=[],bot20=[];
+  sorted.forEach(([sup,v],i)=>{
+    const pct=v.v/tot*100;cum+=pct;const wdpo=v.v>0?v.dw/v.v:0;
+    const e={rank:i+1,supplier:sup,value:v.v,count:v.c,pct,cum:parseFloat(cum.toFixed(1)),wdpo};
+    (si===-1?(cum<=83):i<=si)?top80.push(e):bot20.push(e);
+  });
+  return{top80,bot20,total:tot,totalSupp:sorted.length};
+}
+
+// ── PARETO TABLE ──
+function buildPareto(){
+  const map={};DATA.forEach(r=>{const s=r.Supplier;if(!map[s])map[s]={v:0,c:0};map[s].v+=r['Amount in INR'];map[s].c++;});
+  const tot=Object.values(map).reduce((s,v)=>s+v.v,0);
+  const sorted=Object.entries(map).sort((a,b)=>b[1].v-a[1].v);
+  const si=nearestTo80(sorted.map(([,v])=>v.v/tot*100));
+  let cum=0;
+  document.getElementById('paretoTbody').innerHTML=sorted.map(([sup,v],i)=>{
+    const pct=v.v/tot*100;cum+=pct;const cat=si===-1?(cum<=83):i<=si;
+    return`<tr><td>${i+1}</td><td style="max-width:220px;word-break:break-word;font-size:12px;">${sup}</td><td class="tr">${fmtFull(v.v)}</td><td class="tr">${v.c}</td><td><div class="pbar-wrap"><div class="pbar-track"><div class="pbar-fill" style="width:${Math.min(pct*4,100)}%"></div></div><div class="pbar-pct">${pct.toFixed(1)}%</div></div></td><td>${cum.toFixed(1)}%</td><td><span class="pill ${cat?'p-top':'p-tail'}">${cat?'&#11088; Top 80%':'Long Tail'}</span></td></tr>`;
+  }).join('');
+}
+
+function togglePareto(){
+  const b=document.getElementById('paretoBody'),c=document.getElementById('paretoChevron');
+  if(!b||!c)return;const o=b.style.display!=='none';
+  b.style.display=o?'none':'block';c.style.transform=o?'rotate(-90deg)':'none';
+}
+
+// ── DROPDOWNS ──
+function buildAllDropdowns(){
+  buildMulti('sListW',uniq(DATA,'Supplier'),selS,()=>{const e=document.getElementById('sBtnTxt');e.textContent=selS.size?[...selS].slice(0,2).join(', ')+(selS.size>2?' +more':''):'Select suppliers...';});
+  buildMulti('cntListW',uniq(DATA,'Country'),selCnt,()=>{const e=document.getElementById('cntBtnTxt');e.textContent=selCnt.size?[...selCnt].slice(0,2).join(', ')+(selCnt.size>2?' +more':''):'Select countries...';});
+  buildMulti('pListW',uniq(DATA,'PO no.'),selP,()=>{const e=document.getElementById('pBtnTxt');e.textContent=selP.size?[...selP].slice(0,2).join(', ')+(selP.size>2?' +more':''):'Select PO numbers...';});
+  buildRadio('buListW',['(All BUs)',...uniq(DATA,'BU')],v=>{selBU=v==='(All BUs)'?null:v;document.getElementById('buBtnTxt').textContent=selBU||'All BUs';});
+  buildRadio('buyerListW',['(All Buyers)',...uniq(DATA,'POC')],v=>{selBuyer=v==='(All Buyers)'?null:v;document.getElementById('buyerBtnTxt').textContent=selBuyer||'All Buyers';});
+  buildRadio('mbListW',['(All Buyers)',...uniq(DATA,'POC')],v=>{selMBuyer=v==='(All Buyers)'?null:v;document.getElementById('mbBtnTxt').textContent=selMBuyer||'All Buyers';});
+  const months=[...new Set(DATA.map(r=>r.Month_Year).filter(Boolean))].sort((a,b)=>{const[ma,ya]=a.split(' '),[mb,yb]=b.split(' ');return(+ya-+yb)||(MO.indexOf(ma)-MO.indexOf(mb));});
+  buildRadio('moListW',months,v=>{selMonth=v;document.getElementById('moBtnTxt').textContent=v;});
+  // Auto-build chart for all buyers
+  buildMonthChart(null);
+}
+
+function buildMulti(wid,items,state,updateFn){
+  const wrap=document.getElementById(wid);wrap.innerHTML='';
+  const allD=document.createElement('div');allD.className='cs-item';
+  const allCb=document.createElement('input');allCb.type='checkbox';allCb.checked=state.size===0;
+  const allLbl=document.createElement('label');allLbl.textContent='Select All';allLbl.style.cssText='cursor:pointer;flex:1;';
+  allD.appendChild(allCb);allD.appendChild(allLbl);
+  allCb.addEventListener('change',()=>{if(allCb.checked){state.clear();wrap.querySelectorAll('input[type=checkbox]').forEach((c,i)=>{if(i>0){c.checked=false;c.closest('.cs-item').classList.remove('sel');}});}updateFn();});
+  wrap.appendChild(allD);
+  items.forEach(item=>{
+    const d=document.createElement('div');d.className='cs-item'+(state.has(item)?' sel':'');d.dataset.val=item;
+    const cb=document.createElement('input');cb.type='checkbox';cb.checked=state.has(item);
+    const lbl=document.createElement('label');lbl.textContent=item;lbl.style.cssText='cursor:pointer;flex:1;';
+    d.appendChild(cb);d.appendChild(lbl);
+    cb.addEventListener('change',()=>{if(cb.checked){state.add(item);d.classList.add('sel');allCb.checked=false;}else{state.delete(item);d.classList.remove('sel');if(!state.size)allCb.checked=true;}updateFn();});
+    wrap.appendChild(d);
+  });
+}
+
+function buildRadio(wid,items,onChange){
+  const wrap=document.getElementById(wid);wrap.innerHTML='';
+  items.forEach(item=>{
+    const d=document.createElement('div');d.className='cs-item';d.dataset.val=item;
+    const r=document.createElement('div');r.className='cs-radio';
+    const sp=document.createElement('span');sp.textContent=item;
+    d.appendChild(r);d.appendChild(sp);
+    d.addEventListener('click',()=>{wrap.querySelectorAll('.cs-item').forEach(i=>i.classList.remove('sel'));d.classList.add('sel');onChange(item);});
+    wrap.appendChild(d);
+  });
+}
+
+function filterItems(wid,q){document.getElementById(wid).querySelectorAll('.cs-item[data-val]').forEach(i=>{i.style.display=i.dataset.val.toLowerCase().includes(q.toLowerCase())?'':'none';});}
+
+function toggleDrop(pId,bId,preferUp=false){
+  const p=document.getElementById(pId),b=document.getElementById(bId);
+  const was=p.classList.contains('show');closeAllDrops();
+  if(!was){
+    // Check space below vs above
+    const rect=b.getBoundingClientRect();
+    const spaceBelow=window.innerHeight-rect.bottom;
+    if(preferUp||spaceBelow<270){
+      p.style.top='auto';p.style.bottom='calc(100% + 4px)';
+    } else {
+      p.style.top='calc(100% + 4px)';p.style.bottom='auto';
+    }
+    p.classList.add('show');b.classList.add('open');
+  }
+}
+function closeAllDrops(){document.querySelectorAll('.cs-panel.show').forEach(p=>p.classList.remove('show'));document.querySelectorAll('.cs-btn.open').forEach(b=>b.classList.remove('open'));}
+
+// ── SUPPLIER SEARCH ──
+function runSupplierSearch(){
+  let rows=DATA;
+  if(selS.size)   rows=rows.filter(r=>selS.has(r.Supplier));
+  if(selCnt.size) rows=rows.filter(r=>selCnt.has(r.Country));
+  if(selP.size)   rows=rows.filter(r=>selP.has(r['PO no.']));
+  if(!rows.length){alert('No records found for the selected filters.');return;}
+  document.getElementById('sEmpty').classList.add('hidden');
+  document.getElementById('sResult').classList.remove('hidden');
+  const tot      = sumF(rows,'Amount in INR');
+  const suppList = [...new Set(rows.map(r=>r.Supplier))];
+  const cntList  = [...new Set(rows.map(r=>r.Country).filter(Boolean))];
+  document.getElementById('sMeta').innerHTML =
+    '<div class="meta"><div class="meta-lbl">Supplier(s)</div><div class="meta-val">'+(suppList.length>1?suppList.length+' suppliers':suppList[0])+'</div></div>'+
+    '<div class="meta"><div class="meta-lbl">Country(s)</div><div class="meta-val">'+( cntList.length>2?cntList.length+' countries':cntList.join(', ') )+'</div></div>'+
+    '<div class="meta"><div class="meta-lbl">Total Amount</div><div class="meta-val lg">'+fmtFull(tot)+'</div></div>'+
+    '<div class="meta"><div class="meta-lbl">POC(s)</div><div class="meta-val">'+[...new Set(rows.map(r=>r.POC))].join(', ')+'</div></div>'+
+    '<div class="meta"><div class="meta-lbl">Wtd Avg DPO</div><div class="meta-val">'+wDpo(rows).toFixed(1)+' days</div></div>'+
+    '<div class="meta"><div class="meta-lbl">PO Lines</div><div class="meta-val">'+rows.length+'</div></div>';
+  document.getElementById('sTbody').innerHTML=rows.map((r,i)=>
+    '<tr>'+
+    '<td>'+(i+1)+'</td>'+
+    '<td><span class="pill p-t">'+r.BU+'</span></td>'+
+    '<td style="font-size:12px;">'+( r.Country||'—' )+'</td>'+
+    '<td style="max-width:180px;word-break:break-word;">'+r.Product+'</td>'+
+    '<td class="tr">'+((+r.qty||0).toLocaleString())+'</td>'+
+    '<td>'+r.UOM+'</td>'+
+    '<td class="tr">'+fmtFull(r['Amount in INR'])+'</td>'+
+    '<td style="max-width:150px;font-size:12px;">'+r['Payment terms']+'</td>'+
+    '<td>'+dpoPill(r.DPO)+'</td>'+
+    '</tr>'
+  ).join('')+
+  '<tr class="total-row"><td colspan="6">TOTAL / WEIGHTED AVG DPO</td><td class="tr">'+fmtFull(tot)+'</td><td></td><td>'+dpoPill(Math.round(wDpo(rows)))+'</td></tr>';
+}
+function clearS(){selS.clear();selP.clear();selCnt.clear();document.getElementById('sResult').classList.add('hidden');document.getElementById('sEmpty').classList.remove('hidden');buildAllDropdowns();}
+
+// ── BU ANALYSIS ──
+function runBuSearch(){
+  const bus=selBU?[selBU]:uniq(DATA,'BU');
+  const f=DATA.filter(r=>bus.includes(r.BU));
+  document.getElementById('buEmpty').classList.add('hidden');document.getElementById('buResult').classList.remove('hidden');
+  document.getElementById('buMeta').innerHTML=`<div class="meta"><div class="meta-lbl">BU(s)</div><div class="meta-val">${bus.join(', ')}</div></div><div class="meta"><div class="meta-lbl">Total PO Value</div><div class="meta-val lg">${fmtFull(sumF(f,'Amount in INR'))}</div></div><div class="meta"><div class="meta-lbl">PO Lines</div><div class="meta-val">${f.length}</div></div><div class="meta"><div class="meta-lbl">Wtd DPO</div><div class="meta-val">${wDpo(f).toFixed(1)} days</div></div>`;
+  document.getElementById('buTbody').innerHTML=bus.map(bu=>{const r=DATA.filter(x=>x.BU===bu);const cnts=[...new Set(r.map(x=>x.Country).filter(Boolean))];return`<tr><td><strong>${bu}</strong></td><td style="font-size:12px;">${cnts.length>2?cnts.length+' countries':cnts.join(', ')}</td><td class="tr">${fmtFull(sumF(r,'Amount in INR'))}</td><td class="tr">${r.length}</td><td>${dpoPill(Math.round(wDpo(r)))} <span style="font-size:11px;color:var(--text3)">(${wDpo(r).toFixed(1)}d)</span></td><td><span class="pill p-o">${Math.max(...r.map(x=>x.DPO))}d</span></td><td><span class="pill p-g">${Math.min(...r.map(x=>x.DPO))}d</span></td></tr>`;}).join('');
+}
+function clearBu(){selBU=null;document.getElementById('buResult').classList.add('hidden');document.getElementById('buEmpty').classList.remove('hidden');buildAllDropdowns();}
+
+// ── BUYER ANALYSIS ──
+function runBuyerSearch(){
+  const buyers=selBuyer?[selBuyer]:uniq(DATA,'POC');
+  const f=DATA.filter(r=>buyers.includes(r.POC));
+  document.getElementById('buyerEmpty').classList.add('hidden');document.getElementById('buyerResult').classList.remove('hidden');
+  document.getElementById('buyerMeta').innerHTML=`<div class="meta"><div class="meta-lbl">Buyer(s)</div><div class="meta-val">${buyers.join(', ')}</div></div><div class="meta"><div class="meta-lbl">Total PO Value</div><div class="meta-val lg">${fmtFull(sumF(f,'Amount in INR'))}</div></div><div class="meta"><div class="meta-lbl">PO Lines</div><div class="meta-val">${f.length}</div></div><div class="meta"><div class="meta-lbl">Overall Wtd DPO</div><div class="meta-val">${wDpo(f).toFixed(1)} days</div></div>`;
+  document.getElementById('buyerTbody').innerHTML=buyers.map(b=>{const r=DATA.filter(x=>x.POC===b);const cnts=[...new Set(r.map(x=>x.Country).filter(Boolean))];return`<tr><td><strong>${b}</strong></td><td class="tr">${fmtFull(sumF(r,'Amount in INR'))}</td><td class="tr">${r.length}</td><td>${dpoPill(Math.round(wDpo(r)))} <span style="font-size:11px;color:var(--text3)">(${wDpo(r).toFixed(1)}d)</span></td><td style="font-size:12px;">${[...new Set(r.map(x=>x.BU))].join(', ')}</td><td style="font-size:12px;">${cnts.length>3?cnts.length+' countries':cnts.join(', ')}</td><td class="tr">${new Set(r.map(x=>x.Supplier)).size}</td></tr>`;}).join('');
+}
+function clearBuyer(){selBuyer=null;document.getElementById('buyerResult').classList.add('hidden');document.getElementById('buyerEmpty').classList.remove('hidden');buildAllDropdowns();}
+
+// ── MONTH DPO ──
+let dpoChart=null;
+function buildMonthChart(buyer){
+  const months=[...new Set(DATA.map(r=>r.Month_Year).filter(Boolean))].sort((a,b)=>{const[ma,ya]=a.split(' '),[mb,yb]=b.split(' ');return(+ya-+yb)||(MO.indexOf(ma)-MO.indexOf(mb));});
+  const rows=buyer?DATA.filter(r=>r.POC===buyer):DATA;
+  const labels=[],values=[];
+  months.forEach(m=>{const mr=rows.filter(r=>r.Month_Year===m);if(mr.length>0){labels.push(m);values.push(parseFloat(wDpo(mr).toFixed(1)));}});
+  if(labels.length<2){document.getElementById('monthChartWrap').classList.add('hidden');return;}
+  document.getElementById('monthChartWrap').classList.remove('hidden');
+  document.getElementById('chartTitle').textContent='Monthly Wtd Avg DPO - '+(buyer||'All Buyers');
+  const canvas=document.getElementById('dpoLineChart');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  if(dpoChart)dpoChart.destroy();
+  const grad=ctx.createLinearGradient(0,0,0,200);
+  grad.addColorStop(0,'rgba(3,197,174,0.55)');grad.addColorStop(0.5,'rgba(3,197,174,0.18)');grad.addColorStop(1,'rgba(0,99,92,0)');
+  const dk=document.documentElement.getAttribute('data-theme')==='dark';
+  const gc=dk?'rgba(255,255,255,.06)':'rgba(0,0,0,.05)',tc=dk?'#9ab3c4':'#7a93a6';
+  dpoChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Wtd DPO',data:values,borderColor:'#03c5ae',backgroundColor:grad,borderWidth:2.5,pointBackgroundColor:'#fff',pointBorderColor:'#03c5ae',pointBorderWidth:2,pointRadius:5,pointHoverRadius:7,fill:true,tension:0.42}]},options:{responsive:true,maintainAspectRatio:false,animation:{duration:600},plugins:{legend:{display:false},tooltip:{backgroundColor:dk?'#1c2530':'#fff',titleColor:'#03c5ae',bodyColor:tc,borderColor:'#03c5ae44',borderWidth:1,padding:10,callbacks:{label:c=>' Wtd DPO: '+c.raw+' days'}}},scales:{x:{grid:{color:gc},ticks:{color:tc,font:{size:11}}},y:{grid:{color:gc},ticks:{color:tc,font:{size:11}},title:{display:true,text:'DPO (days)',color:tc,font:{size:11}},beginAtZero:true}}}});
+}
+
+function runMonthSearch(){
+  if(selMBuyer) buildMonthChart(selMBuyer);
+  let rows=DATA;
+  if(selMBuyer)rows=rows.filter(r=>r.POC===selMBuyer);
+  if(selMonth)rows=rows.filter(r=>r.Month_Year===selMonth);
+  if(!rows.length){alert('No data for this selection.');return;}
+  const avg=rows.reduce((s,r)=>s+r.DPO,0)/rows.length,wdpo=wDpo(rows),tot=sumF(rows,'Amount in INR');
+  const res=document.getElementById('monthResult');
+  res.style.display='block';
+  res.innerHTML=`<div class="big">${wdpo.toFixed(1)}</div><div class="lbl">Weighted Avg DPO &nbsp;|&nbsp; ${selMBuyer||'All Buyers'}${selMonth?' - '+selMonth:''}</div><div class="det">${rows.length} PO lines &nbsp;&middot;&nbsp; Simple Avg: ${avg.toFixed(1)}d &nbsp;&middot;&nbsp; Total: ${fmtFull(tot)}</div>`;
+  document.getElementById('monthDetail').classList.remove('hidden');
+  document.getElementById('monthTbody').innerHTML=rows.map(r=>`<tr><td>${r['PO no.']}</td><td><span class="pill p-t">${r.BU}</span></td><td style="max-width:160px;font-size:12px;">${r.Product}</td><td style="font-size:12px;">${r.Supplier}</td><td class="tr">${fmtFull(r['Amount in INR'])}</td><td>${dpoPill(r.DPO)}</td><td>${r.PO_date_str}</td></tr>`).join('');
+  closeAllDrops();
+}
+function clearMonth(){selMBuyer=null;selMonth=null;document.getElementById('monthResult').style.display='none';document.getElementById('monthDetail').classList.add('hidden');document.getElementById('mbBtnTxt').textContent='Select buyer...';document.getElementById('moBtnTxt').textContent='Select month...';buildAllDropdowns();}
+
+// ── SPEND TREE ──
+function initSpendTree(){
+  const tot=sumF(DATA,'Amount in INR');
+  const domR=DATA.filter(isDom),impR=DATA.filter(isImp);
+  const dt=sumF(domR,'Amount in INR'),it=sumF(impR,'Amount in INR');
+  const se=(id,v)=>{const el=document.getElementById(id);if(el)el.innerHTML=v;};
+  se('treeRoot',fmtFull(tot));
+  se('treeDomVal',fmt(dt));se('treeDomSub',(dt/tot*100).toFixed(1)+'% of total - '+new Set(domR.map(r=>r.Supplier)).size+' suppliers');
+  se('treeImpVal',fmt(it));se('treeImpSub',(it/tot*100).toFixed(1)+'% of total - '+new Set(impR.map(r=>r.Supplier)).size+' suppliers');
+  buildTreeTable(domR,'treeDomBody','treeDomWdpo','treeDomAlert');
+  buildTreeTable(impR,'treeImpBody','treeImpWdpo','treeImpAlert');
+}
+
+function buildTreeTable(rows,tbodyId,wdpoId,alertId){
+  const{top80,totalSupp}=paretoRows(rows);
+  const v80=top80.reduce((s,e)=>s+e.value,0),wd80=v80>0?top80.reduce((s,e)=>s+e.value*e.wdpo,0)/v80:0;
+  const wd=document.getElementById(wdpoId);if(wd)wd.textContent='Wtd Avg DPO (top suppliers): '+wd80.toFixed(1)+'d';
+  concAlert(top80.length,totalSupp,alertId);
+  let cum=0;const tb=document.getElementById(tbodyId);if(!tb)return;
+  tb.innerHTML=top80.map(e=>{cum+=e.pct;return`<tr><td>${e.rank}</td><td style="max-width:200px;word-break:break-word;font-size:12px;">${e.supplier}</td><td class="tr">${fmtFull(e.value)}</td><td class="tr">${e.count}</td><td><div class="pbar-wrap"><div class="pbar-track"><div class="pbar-fill" style="width:${Math.min(e.pct*4,100)}%"></div></div><div class="pbar-pct">${e.pct.toFixed(1)}%</div></div></td><td>${cum.toFixed(1)}%</td><td>${dpoPill(Math.round(e.wdpo))}</td></tr>`;}).join('');
+}
+function treeToggle(id){const el=document.getElementById(id);if(!el)return;el.classList.contains('hidden')?el.classList.remove('hidden'):el.classList.add('hidden');}
+
+// ── SEGMENT MODALS ──
+function concAlert(sc,tc,elId){
+  const el=document.getElementById(elId);if(!el)return;const r=sc/tc;
+  el.style.cssText='padding:8px 12px;border-radius:6px;font-size:12px;font-weight:600;margin-bottom:10px;'+(r>=.2?'background:#03c5ae18;color:#00635c;border:1px solid #03c5ae44;':'background:#ef444418;color:#dc2626;border:1px solid #ef444444;');
+  el.innerHTML=(r>=.2?'&#10003; <strong>Good distribution</strong>':'&#9888; <strong>High concentration risk</strong>')+' - '+sc+' of '+tc+' suppliers ('+Math.round(r*100)+'%) account for this segment.';
+}
+
+function showSegmentModal(type){
+  const rows=type==='export'?DATA.filter(isImp):DATA.filter(isDom);
+  const lbl=type==='export'?'Import':'Domestic';
+  document.getElementById('segTitle').textContent=lbl+' - Supplier 80/20 Analysis';
+  const tot=sumF(rows,'Amount in INR'),ts=new Set(rows.map(r=>r.Supplier)).size;
+  document.getElementById('segSub').textContent=rows.length+' PO lines - '+ts+' suppliers - Wtd DPO: '+wDpo(rows).toFixed(1)+'d';
+  const{top80,bot20}=paretoRows(rows);
+  const v80=top80.reduce((s,e)=>s+e.value,0),wd80=v80>0?top80.reduce((s,e)=>s+e.value*e.wdpo,0)/v80:0;
+  document.getElementById('segSummary').innerHTML=`<div class="meta"><div class="meta-lbl">Total Spend</div><div class="meta-val lg">${fmtFull(tot)}</div></div><div class="meta"><div class="meta-lbl">Total Suppliers</div><div class="meta-val">${ts}</div></div><div class="meta"><div class="meta-lbl">Top ~80% Suppliers</div><div class="meta-val">${top80.length} (${Math.round(top80.length/ts*100)}%)</div></div><div class="meta"><div class="meta-lbl">Wtd DPO Top 80%</div><div class="meta-val">${wd80.toFixed(1)} days</div></div>`;
+  concAlert(top80.length,ts,'seg80Alert');
+  document.getElementById('seg80Meta').innerHTML=`<div class="meta"><div class="meta-lbl">Suppliers</div><div class="meta-val">${top80.length} of ${ts}</div></div><div class="meta"><div class="meta-lbl">Spend</div><div class="meta-val lg">${fmtFull(v80)}</div></div><div class="meta"><div class="meta-lbl">Wtd DPO</div><div class="meta-val">${wd80.toFixed(1)}d</div></div>`;
+  document.getElementById('seg80Body').innerHTML=top80.map(e=>`<tr><td>${e.rank}</td><td style="max-width:220px;word-break:break-word;font-size:12px;">${e.supplier}</td><td class="tr">${fmtFull(e.value)}</td><td class="tr">${e.count}</td><td><div class="pbar-wrap"><div class="pbar-track"><div class="pbar-fill" style="width:${Math.min(e.pct*4,100)}%"></div></div><div class="pbar-pct">${e.pct.toFixed(1)}%</div></div></td><td>${e.cum.toFixed(1)}%</td><td>${dpoPill(Math.round(e.wdpo))}</td></tr>`).join('');
+  const v20=bot20.reduce((s,e)=>s+e.value,0),wd20=v20>0?bot20.reduce((s,e)=>s+e.value*e.wdpo,0)/v20:0;
+  concAlert(bot20.length,ts,'seg20Alert');
+  document.getElementById('seg20Meta').innerHTML=`<div class="meta"><div class="meta-lbl">Suppliers</div><div class="meta-val">${bot20.length} of ${ts}</div></div><div class="meta"><div class="meta-lbl">Spend</div><div class="meta-val lg">${fmtFull(v20)}</div></div><div class="meta"><div class="meta-lbl">Wtd DPO</div><div class="meta-val">${wd20.toFixed(1)}d</div></div>`;
+  document.getElementById('seg20Body').innerHTML=bot20.map(e=>`<tr><td>${e.rank}</td><td style="max-width:220px;word-break:break-word;font-size:12px;">${e.supplier}</td><td class="tr">${fmtFull(e.value)}</td><td class="tr">${e.count}</td><td><div class="pbar-wrap"><div class="pbar-track"><div class="pbar-fill" style="width:${Math.min(e.pct*4,100)}%"></div></div><div class="pbar-pct">${e.pct.toFixed(1)}%</div></div></td><td>${e.cum.toFixed(1)}%</td><td>${dpoPill(Math.round(e.wdpo))}</td></tr>`).join('');
+  switchSegTab('80');
+  document.getElementById('segOverlay').classList.add('show');
+}
+function switchSegTab(tab){
+  document.getElementById('seg80Tab').classList.toggle('active',tab==='80');
+  document.getElementById('seg20Tab').classList.toggle('active',tab==='20');
+  document.getElementById('seg80Pane').style.display=tab==='80'?'block':'none';
+  document.getElementById('seg20Pane').style.display=tab==='20'?'block':'none';
+}
+
+function showTotalPOModal(){
+  const impR=DATA.filter(isImp),domR=DATA.filter(isDom);
+  const it=sumF(impR,'Amount in INR'),dt=sumF(domR,'Amount in INR'),tot=it+dt;
+  document.getElementById('tpoSummary').innerHTML=`<div class="meta"><div class="meta-lbl">Grand Total</div><div class="meta-val lg">${fmtFull(tot)}</div></div><div class="meta"><div class="meta-lbl">Import</div><div class="meta-val">${fmtFull(it)} (${(it/tot*100).toFixed(1)}%)</div></div><div class="meta"><div class="meta-lbl">Domestic</div><div class="meta-val">${fmtFull(dt)} (${(dt/tot*100).toFixed(1)}%)</div></div><div class="meta"><div class="meta-lbl">Import Wtd DPO</div><div class="meta-val">${wDpo(impR).toFixed(1)}d</div></div><div class="meta"><div class="meta-lbl">Domestic Wtd DPO</div><div class="meta-val">${wDpo(domR).toFixed(1)}d</div></div>`;
+  function buildTpo(rows,bodyId,metaId,alertId){
+    const p=paretoRows(rows);const tot2=sumF(rows,'Amount in INR');
+    concAlert(p.top80.length,p.totalSupp,alertId);
+    document.getElementById(metaId).innerHTML=`<div class="meta"><div class="meta-lbl">Total Spend</div><div class="meta-val">${fmtFull(tot2)}</div></div><div class="meta"><div class="meta-lbl">Suppliers</div><div class="meta-val">${p.totalSupp}</div></div><div class="meta"><div class="meta-lbl">Top ~80%</div><div class="meta-val">${p.top80.length} (${Math.round(p.top80.length/p.totalSupp*100)}%)</div></div><div class="meta"><div class="meta-lbl">Wtd DPO</div><div class="meta-val">${wDpo(rows).toFixed(1)}d</div></div>`;
+    let c=0;
+    document.getElementById(bodyId).innerHTML=[...p.top80,...p.bot20].map((e,i)=>{c+=e.pct;const cat=p.top80.includes(e);return`<tr><td>${i+1}</td><td style="max-width:220px;word-break:break-word;font-size:12px;">${e.supplier}</td><td class="tr">${fmtFull(e.value)}</td><td class="tr">${e.count}</td><td><div class="pbar-wrap"><div class="pbar-track"><div class="pbar-fill" style="width:${Math.min(e.pct*4,100)}%"></div></div><div class="pbar-pct">${e.pct.toFixed(1)}%</div></div></td><td>${c.toFixed(1)}%</td><td><span class="pill ${cat?'p-top':'p-tail'}">${cat?'&#11088; Top 80%':'Long Tail'}</span></td></tr>`;}).join('');
+  }
+  buildTpo(impR,'tpoImpBody','tpoImpMeta','tpoImpAlert');
+  buildTpo(domR,'tpoDomBody','tpoDomMeta','tpoDomAlert');
+  switchTpoTab('imp',document.getElementById('tpoImpTab'));
+  document.getElementById('tpoOverlay').classList.add('show');
+}
+function switchTpoTab(tab,btn){
+  document.getElementById('tpoImpTab').classList.toggle('active',tab==='imp');
+  document.getElementById('tpoDomTab').classList.toggle('active',tab==='dom');
+  document.getElementById('tpoImpPane').style.display=tab==='imp'?'block':'none';
+  document.getElementById('tpoDomPane').style.display=tab==='dom'?'block':'none';
+}
+
+// ── DPO MODAL ──
+function showDpoModal(){
+  const tot=sumF(DATA,'Amount in INR'),wt=DATA.reduce((s,r)=>s+r['Amount in INR']*r.DPO,0),ov=tot>0?wt/tot:0;
+  const pocs=uniq(DATA,'POC').map(p=>{const r=DATA.filter(x=>x.POC===p);const a=sumF(r,'Amount in INR');return{poc:p,amt:a,wdpo:a>0?r.reduce((s,x)=>s+x['Amount in INR']*x.DPO,0)/a:0,pct:a/tot*100};}).sort((a,b)=>b.amt-a.amt);
+  document.getElementById('dpoBody').innerHTML=`<div class="calc-block"><h4>Formula</h4><div class="formula">Weighted Avg DPO = Σ(Amount × DPO) ÷ Σ(Amount) = ${ov.toFixed(2)} days</div></div><div class="calc-block"><h4>By Buyer (POC)</h4>${pocs.map(p=>`<div class="calc-row"><span><strong>${p.poc}</strong></span><span>Amount: ${fmt(p.amt)} &nbsp;|&nbsp; Wtd DPO: ${p.wdpo.toFixed(1)}d &nbsp;|&nbsp; Share: ${p.pct.toFixed(1)}%</span></div>`).join('')}<div class="calc-row" style="border-top:2px solid var(--c1);margin-top:8px;padding-top:8px;"><span><strong>Overall Weighted DPO</strong></span><span style="font-size:16px;color:var(--c1);font-weight:700;">${ov.toFixed(2)} days</span></div></div><div class="calc-block"><h4>Why Weighted Average?</h4><p style="font-size:13px;color:var(--text2);line-height:1.75;">A simple average treats every PO equally regardless of value. Weighted average ensures larger POs have proportionally more influence, reflecting the real cash flow impact.</p></div>`;
+  document.getElementById('dpoOverlay').classList.add('show');
+}
+
+// ── UTILS ──
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===e.currentTarget)e.target.classList.remove('show');}));
+function switchTab(id,btn){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));btn.classList.add('active');document.getElementById('tp-'+id).classList.add('active');}
+function toggleTheme(){const dk=document.documentElement.getAttribute('data-theme')==='dark';const b=document.getElementById('togBtn'),k=document.getElementById('togKnob');if(dk){document.documentElement.removeAttribute('data-theme');b.classList.remove('on');k.textContent='☀';}else{document.documentElement.setAttribute('data-theme','dark');b.classList.add('on');k.textContent='🌙';}}
+
+// ═══════════════════════════════════════
+// ALL SUPPLIERS MODAL
+// ═══════════════════════════════════════
+let _suppData = [];
+
+function showAllSuppliersModal() {
+  const impR=DATA.filter(isImp), domR=DATA.filter(isDom);
+  const impSet=new Set(impR.map(r=>r.Supplier.trim()));
+  const domSet=new Set(domR.map(r=>r.Supplier.trim()));
+  const allSet=new Set(DATA.map(r=>r.Supplier.trim()));
+  const overlap=[...impSet].filter(s=>domSet.has(s));
+
+  // Year comparison logic
+  const fySet=new Set();
+  ALL_DATA.forEach(r=>{const f=getFY(r.PO_date_str);if(f)fySet.add(f);});
+  const fys=[...fySet].sort();
+  const curFY  = CURRENT_FY==='Overall' ? fys[fys.length-1] : CURRENT_FY;
+  const prevFY = fys[fys.indexOf(curFY)-1] || null;
+  const curData  = ALL_DATA.filter(r=>getFY(r.PO_date_str)===curFY);
+  const prevData = prevFY ? ALL_DATA.filter(r=>getFY(r.PO_date_str)===prevFY) : [];
+  const curSet   = new Set(curData.map(r=>r.Supplier.trim()));
+  const prevSet  = new Set(prevData.map(r=>r.Supplier.trim()));
+  const newSupp   = [...curSet].filter(s=>!prevSet.has(s));
+  const leftSupp  = [...prevSet].filter(s=>!curSet.has(s));
+  const existSupp = [...curSet].filter(s=>prevSet.has(s));
+
+  // Store for tab switching
+  window._suppMeta = { curFY, prevFY, newSupp, leftSupp, existSupp, curSet, prevSet };
+
+  document.getElementById('suppModalSub').textContent=
+    allSet.size+' unique suppliers — '+domSet.size+' domestic, '+impSet.size+' import'+(overlap.length?' ('+overlap.length+' in both)':'');
+
+  document.getElementById('suppModalMeta').innerHTML=
+    '<div class="meta"><div class="meta-lbl">Total Unique</div><div class="meta-val">'+allSet.size+'</div></div>'+
+    '<div class="meta"><div class="meta-lbl">Domestic Only</div><div class="meta-val">'+[...domSet].filter(s=>!impSet.has(s)).length+'</div></div>'+
+    '<div class="meta"><div class="meta-lbl">Import Only</div><div class="meta-val">'+[...impSet].filter(s=>!domSet.has(s)).length+'</div></div>'+
+    '<div class="meta"><div class="meta-lbl">&#43; New ('+curFY+')</div><div class="meta-val" style="color:#03c5ae;">'+newSupp.length+'</div></div>'+
+    '<div class="meta"><div class="meta-lbl">&#8722; Left (vs '+( prevFY||'N/A')+')</div><div class="meta-val" style="color:#ef4444;">'+leftSupp.length+'</div></div>'+
+    '<div class="meta"><div class="meta-lbl">&#8644; Existing Both Yrs</div><div class="meta-val">'+existSupp.length+'</div></div>';
+
+  _suppData=[...allSet].sort().map(s=>{
+    const rows=DATA.filter(r=>r.Supplier.trim()===s);
+    const inD=domSet.has(s),inI=impSet.has(s);
+    const inCur=curSet.has(s),inPrev=prevSet.has(s);
+    const yStatus=!prevFY?'—':inCur&&inPrev?'Existing':inCur&&!inPrev?'New':'Left';
+    return{supplier:s,seg:(inD&&inI)?'Both':inD?'Domestic':'Import',lines:rows.length,value:sumF(rows,'Amount in INR'),wdpo:wDpo(rows),yStatus};
+  });
+
+  renderSuppTable(_suppData);
+  document.querySelectorAll('#suppOverlay .tab').forEach((t,i)=>{t.classList.toggle('active',i===0);});
+  const yc=document.getElementById('suppYearCompare');
+  if(yc&&prevFY){yc.style.display='block';yc.innerHTML='&#128200; Year comparison: <strong>'+curFY+'</strong> vs <strong>'+prevFY+'</strong> — <span style="color:#03c5ae;">'+newSupp.length+' new</span>, <span style="color:#ef4444;">'+leftSupp.length+' left</span>, <span>'+existSupp.length+' continuing</span>';}
+  document.getElementById('suppSearch').value='';
+  document.getElementById('suppOverlay').classList.add('show');
+}
+
+function renderSuppTable(data){
+  document.getElementById('suppModalBody').innerHTML=data.map((s,i)=>{
+    const sp=s.seg==='Both'?'<span class="pill p-o">Both</span>':s.seg==='Domestic'?'<span class="pill p-t">Domestic</span>':'<span class="pill p-b">Import</span>';
+    const ys=s.yStatus==='New'?'<span class="pill p-g">&#43; New</span>':s.yStatus==='Left'?'<span class="pill p-r">&#8722; Left</span>':s.yStatus==='Existing'?'<span class="pill p-b">&#8644; Existing</span>':'<span style="color:var(--text3);font-size:11px;">—</span>';
+    // Get countries for this supplier
+    const rows=DATA.filter(r=>r.Supplier.trim()===s.supplier);
+    const countries=[...new Set(rows.map(r=>r.Country).filter(Boolean))].join(', ')||'—';
+    return'<tr><td>'+(i+1)+'</td><td style="max-width:180px;word-break:break-word;font-size:12px;font-weight:600;">'+s.supplier+'</td><td style="font-size:12px;">'+countries+'</td><td>'+sp+'</td><td>'+ys+'</td><td class="tr">'+s.lines+'</td><td class="tr">'+fmtFull(s.value)+'</td><td>'+dpoPill(Math.round(s.wdpo))+'</td></tr>';
+  }).join('')||'<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text3);">No suppliers found</td></tr>';
+}
+
+function switchSuppTab(tab,btn){
+  document.querySelectorAll('#suppOverlay .tab').forEach(t=>t.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  let f=_suppData;
+  if(tab==='dom')   f=_suppData.filter(s=>s.seg==='Domestic'||s.seg==='Both');
+  if(tab==='imp')   f=_suppData.filter(s=>s.seg==='Import'||s.seg==='Both');
+  if(tab==='ovlp')  f=_suppData.filter(s=>s.seg==='Both');
+  if(tab==='new')   f=_suppData.filter(s=>s.yStatus==='New');
+  if(tab==='exist') f=_suppData.filter(s=>s.yStatus==='Existing');
+  if(tab==='left'){
+    // Left = suppliers in PREV year but not current — fetch from ALL_DATA
+    const meta=window._suppMeta||{};
+    if(meta.prevSet&&meta.curSet){
+      const leftList=[...meta.prevSet].filter(s=>!meta.curSet.has(s));
+      f=leftList.map((s,i)=>{
+        const rows=ALL_DATA.filter(r=>r.Supplier.trim()===s);
+        const impR2=rows.filter(isImp),domR2=rows.filter(isDom);
+        const inD=domR2.length>0,inI=impR2.length>0;
+        return{supplier:s,seg:(inD&&inI)?'Both':inD?'Domestic':'Import',lines:rows.length,value:sumF(rows,'Amount in INR'),wdpo:wDpo(rows),yStatus:'Left'};
+      });
+    }
+  }
+  renderSuppTable(f);
+}
+
+function filterSuppModal(q){renderSuppTable(_suppData.filter(s=>s.supplier.toLowerCase().includes(q.toLowerCase())));}
+
+// ═══════════════════════════════════════
+// DPO IMPROVEMENT TRACKER
+// ═══════════════════════════════════════
+const DPO_IMP_API = 'https://script.google.com/macros/s/AKfycbyO_jKRmDG0ahswyor8Hack8lbSEhcJ55k4LFkSbeWJz5dTq2kWQC6rtcBT03QQ3pc1/exec';
+let DPO_IMP_DATA  = [];
+let dimSelPoc     = null;
+let dimSelCnt     = null;
+
+async function loadDPOImprove() {
+  const st = document.getElementById('dpoImpStatus');
+  if(st) st.textContent = 'Loading...';
+  document.getElementById('dpoImpTbody').innerHTML =
+    '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text3);font-size:13px;">Fetching DPO improvement data...</td></tr>';
+  try {
+    const ctrl = new AbortController();
+    setTimeout(() => ctrl.abort(), 15000);
+    const res  = await fetch(DPO_IMP_API, { redirect:'follow', signal:ctrl.signal });
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    const json = JSON.parse(await res.text());
+    if(!Array.isArray(json) || json.length === 0) throw new Error('No data in sheet');
+    DPO_IMP_DATA = json.map(r => {
+      const o = {};
+      Object.keys(r).forEach(k => { o[k.trim()] = (r[k]===null||r[k]===undefined) ? '' : String(r[k]).trim(); });
+      return {
+        Product   : o['Product']    || '',
+        Supplier  : o['Supplier']   || '',
+        Country   : o['Country']    || '',
+        CurrentDPO: parseFloat(o['DPO']) || 0,
+        TargetDPO : parseFloat(o['Targeted DPO Till EOY']) || 0,
+        POC       : o['POC'] || ''
+      };
+    }).filter(r => r.Supplier);
+    if(st) st.textContent = 'Updated ' + new Date().toLocaleTimeString();
+    buildDPOImpDropdowns();
+    renderDPOImprove();
+  } catch(err) {
+    if(st) st.textContent = 'Error';
+    document.getElementById('dpoImpTbody').innerHTML =
+      '<tr><td colspan="8" style="text-align:center;padding:30px;">' +
+      '<div style="font-size:26px;margin-bottom:8px;">&#9888;&#65039;</div>' +
+      '<div style="color:#ef4444;font-weight:700;margin-bottom:6px;">Could not load data</div>' +
+      '<div style="font-size:12px;color:var(--text3);margin-bottom:14px;">' + err.message + '</div>' +
+      '<button class="btn-p" onclick="loadDPOImprove()">Retry</button></td></tr>';
+  }
+}
+
+function buildDPOImpDropdowns() {
+  const pocs = [...new Set(DPO_IMP_DATA.map(r => r.POC).filter(Boolean))].sort();
+  const cnts = [...new Set(DPO_IMP_DATA.map(r => r.Country).filter(Boolean))].sort();
+  buildRadio('dimPocList', ['All POCs', ...pocs],
+    v => { dimSelPoc = v==='All POCs' ? null : v; document.getElementById('dimPocTxt').textContent = v; renderDPOImprove(); });
+  buildRadio('dimCntList', ['All Countries', ...cnts],
+    v => { dimSelCnt = v==='All Countries' ? null : v; document.getElementById('dimCntTxt').textContent = v; renderDPOImprove(); });
+}
+
+function renderDPOImprove() {
+  let rows = DPO_IMP_DATA;
+  if(dimSelPoc) rows = rows.filter(r => r.POC     === dimSelPoc);
+  if(dimSelCnt) rows = rows.filter(r => r.Country === dimSelCnt);
+  if(!rows.length) {
+    document.getElementById('dpoImpTbody').innerHTML =
+      '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text3);">No data for selected filters</td></tr>';
+    updateDPOSummary([]);
+    return;
+  }
+  updateDPOSummary(rows);
+
+  document.getElementById('dpoImpTbody').innerHTML = rows.map((r, i) => {
+    // DPO improvement = we want to INCREASE DPO (extend payment terms)
+    // Gap to close = Target - Current  (positive = still needs improvement)
+    // Progress % = how much of the target has been achieved
+    const gap     = r.TargetDPO - r.CurrentDPO;  // positive = still needs work
+    const achieved = gap <= 0;                     // current already >= target
+
+    // Progress bar: what % of target DPO has been reached
+    const pct = r.TargetDPO > 0
+      ? Math.min(100, Math.round((r.CurrentDPO / r.TargetDPO) * 100))
+      : 100;
+    const barColor = achieved ? '#03c5ae' : pct >= 60 ? '#3b82f6' : '#f59e0b';
+
+    // Gap display
+    const gapDisplay = achieved
+      ? '<span style="color:#03c5ae;font-weight:700;">&#10003; Achieved</span>'
+      : '<span style="color:#d97706;font-weight:700;">+' + gap + 'd needed</span>';
+
+    const domImp = (r.Country||'').toLowerCase() === 'india';
+    const suppLink =
+      '<span style="cursor:pointer;color:var(--c1);text-decoration:underline dotted;font-weight:600;" ' +
+      'onclick="showDPOSuppDetail(\'' + r.Supplier.replace(/'/g, "\\'") + '\',' + r.TargetDPO + ')">' +
+      r.Supplier + '</span>';
+
+    return '<tr>' +
+      '<td>' + (i+1) + '</td>' +
+      '<td style="font-size:12px;max-width:160px;word-break:break-word;">' + suppLink + '</td>' +
+      '<td style="font-size:12px;max-width:140px;word-break:break-word;">' + (r.Product||'—') + '</td>' +
+      '<td><span class="pill ' + (domImp?'p-t':'p-b') + '">' + (r.Country||'—') + '</span></td>' +
+      '<td style="font-size:12px;">' + (r.POC||'—') + '</td>' +
+      '<td style="text-align:center;"><strong style="font-size:14px;">' + r.CurrentDPO + '</strong><span style="font-size:11px;color:var(--text3);">d</span></td>' +
+      '<td style="text-align:center;"><strong style="font-size:14px;color:#03c5ae;">' + r.TargetDPO + '</strong><span style="font-size:11px;color:var(--text3);">d</span></td>' +
+      '<td style="min-width:180px;">' +
+        '<div style="display:flex;align-items:center;gap:8px;">' +
+          '<div style="flex:1;height:10px;background:var(--border);border-radius:5px;overflow:hidden;">' +
+            '<div style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:5px;transition:width .6s ease;"></div>' +
+          '</div>' +
+          '<span style="font-size:11px;color:var(--text3);flex-shrink:0;min-width:32px;">' + pct + '%</span>' +
+        '</div>' +
+        '<div style="font-size:10px;color:var(--text3);margin-top:2px;">' + gapDisplay + '</div>' +
+      '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function updateDPOSummary(rows) {
+  const se = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+  if(!rows.length) {
+    ['dim-count','dim-cur','dim-tgt','dim-gap','dim-ok','dim-bad'].forEach(id => se(id,'—'));
+    return;
+  }
+  const avgCur   = rows.reduce((s,r) => s + r.CurrentDPO, 0) / rows.length;
+  const avgTgt   = rows.reduce((s,r) => s + r.TargetDPO, 0) / rows.length;
+  // Improvement needed = target - current (avg across all)
+  const avgImpNeeded = avgTgt - avgCur;
+  const achieved = rows.filter(r => r.CurrentDPO >= r.TargetDPO).length;
+  const pending  = rows.filter(r => r.CurrentDPO < r.TargetDPO).length;
+
+  se('dim-count', rows.length);
+  se('dim-cur',   avgCur.toFixed(1) + 'd');
+  se('dim-tgt',   avgTgt.toFixed(1) + 'd');
+  se('dim-gap',   avgImpNeeded > 0 ? '+' + avgImpNeeded.toFixed(1) + 'd avg needed' : 'All achieved');
+  se('dim-ok',    achieved + ' of ' + rows.length);
+  se('dim-bad',   pending + ' pending');
+}
+
+function showDPOSuppDetail(supplier, targetDPO) {
+  const rows = ALL_DATA.filter(r => r.Supplier.trim() === supplier);
+  const tDPO = parseFloat(targetDPO) || 0;
+  document.getElementById('dpoSuppTitle').textContent = supplier;
+  document.getElementById('dpoSuppSub').textContent =
+    rows.length + ' PO line(s) in procurement sheet  ·  Target DPO: ' + tDPO + ' days';
+  const totalAmt = sumF(rows, 'Amount in INR');
+  const curWDPO  = wDpo(rows);
+  const gap      = tDPO - curWDPO;
+  const suppCountries = [...new Set(rows.map(r => r.Country).filter(Boolean))].join(', ') || '—';
+  document.getElementById('dpoSuppMeta').innerHTML =
+    '<div class="meta"><div class="meta-lbl">Supplier</div><div class="meta-val">' + supplier + '</div></div>' +
+    '<div class="meta"><div class="meta-lbl">Country</div><div class="meta-val">' + suppCountries + '</div></div>' +
+    '<div class="meta"><div class="meta-lbl">Total PO Value</div><div class="meta-val lg">' + fmtFull(totalAmt) + '</div></div>' +
+    '<div class="meta"><div class="meta-lbl">Current Wtd DPO</div><div class="meta-val">' + curWDPO.toFixed(1) + 'd</div></div>' +
+    '<div class="meta"><div class="meta-lbl">Target DPO (EOY)</div><div class="meta-val" style="color:#03c5ae;">' + tDPO + 'd</div></div>' +
+    '<div class="meta"><div class="meta-lbl">DPO to Improve</div><div class="meta-val" style="color:' + (gap<=0?'#03c5ae':'#d97706') + ';">' +
+    (gap<=0 ? '&#10003; Achieved' : '+' + gap.toFixed(1) + 'd needed') + '</div></div>';
+  document.getElementById('dpoSuppBody').innerHTML = rows.length ?
+    rows.map((r,i) =>
+      '<tr>' +
+      '<td style="font-size:12px;">' + r['PO no.'] + '</td>' +
+      '<td><span class="pill p-t">' + r.BU + '</span></td>' +
+      '<td style="max-width:150px;word-break:break-word;font-size:12px;">' + r.Product + '</td>' +
+      '<td class="tr">' + fmtFull(r['Amount in INR']) + '</td>' +
+      '<td style="font-size:11px;max-width:130px;">' + r['Payment terms'] + '</td>' +
+      '<td style="text-align:center;"><strong>' + r.DPO + '</strong>d</td>' +
+      '<td style="text-align:center;color:#03c5ae;font-weight:700;">' + tDPO + 'd</td>' +
+      '<td style="font-size:12px;">' + r.PO_date_str + '</td>' +
+      '</tr>'
+    ).join('') :
+    '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--text3);">No PO data found for this supplier</td></tr>';
+  document.getElementById('dpoSuppOverlay').classList.add('show');
+}
+
+function clearDPOFilters() {
+  dimSelPoc = null; dimSelCnt = null;
+  document.getElementById('dimPocTxt').textContent = 'All POCs';
+  document.getElementById('dimCntTxt').textContent = 'All Countries';
+  if(DPO_IMP_DATA.length) { buildDPOImpDropdowns(); renderDPOImprove(); }
+}
+
+
+</script>
+
+<!-- ALL SUPPLIERS MODAL -->
+<div class="overlay" id="suppOverlay">
+  <div class="modal" style="max-width:780px;">
+    <button class="modal-close" onclick="closeModal('suppOverlay')">&#215;</button>
+    <h2>All Unique Suppliers</h2>
+    <p class="sub" id="suppModalSub">Full supplier list — segmented by Domestic and Import</p>
+    <div class="meta-row" id="suppModalMeta" style="margin-bottom:16px;"></div>
+    <div class="tabs" style="margin-bottom:0;flex-wrap:wrap;">
+      <button class="tab active" id="suppAllTab"  onclick="switchSuppTab('all',this)">All Suppliers</button>
+      <button class="tab"        id="suppDomTab"  onclick="switchSuppTab('dom',this)">&#127968; Domestic</button>
+      <button class="tab"        id="suppImpTab"  onclick="switchSuppTab('imp',this)">&#127760; Import</button>
+      <button class="tab"        id="suppOvlpTab" onclick="switchSuppTab('ovlp',this)">&#9888; Overlap</button>
+      <button class="tab"        id="suppNewTab"  onclick="switchSuppTab('new',this)" style="color:#03c5ae;">&#43; New</button>
+      <button class="tab"        id="suppExistTab" onclick="switchSuppTab('exist',this)">&#8644; Existing</button>
+      <button class="tab"        id="suppLeftTab" onclick="switchSuppTab('left',this)" style="color:#ef4444;">&#8722; Left</button>
+    </div>
+    <div id="suppYearCompare" style="display:none;padding:10px 0 6px;font-size:12px;color:var(--text3);"></div>
+    <div style="padding:10px 0 6px;">
+      <input type="text" id="suppSearch" placeholder="&#128269;  Search suppliers..." 
+        style="width:100%;padding:9px 14px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface2);color:var(--text);font-family:inherit;font-size:13px;outline:none;"
+        oninput="filterSuppModal(this.value)">
+    </div>
+    <div class="tbl-wrap" style="margin-top:10px;">
+      <table>
+        <thead><tr>
+          <th>#</th><th>Supplier</th><th>Country</th><th>Segment</th><th>YoY Status</th><th>PO Lines</th>
+          <th>Total Value (INR)</th><th>Wtd DPO</th>
+        </tr></thead>
+        <tbody id="suppModalBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
